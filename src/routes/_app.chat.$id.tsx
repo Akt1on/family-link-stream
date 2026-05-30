@@ -11,8 +11,8 @@ export const Route = createFileRoute("/_app/chat/$id")({ component: ChatPage });
 
 type Profile = { id: string; full_name: string; avatar_url: string | null; last_seen: string | null };
 type Message = {
-  id: string; conversation_id: string; user_id: string; content: string; type: string;
-  media_url: string | null; pinned: boolean; created_at: string;
+  id: string; conversation_id: string; user_id: string; content: string | null; type: string;
+  media_url: string | null; pinned: boolean; created_at: string | null;
 };
 type Reaction = { message_id: string; user_id: string; emoji: string };
 

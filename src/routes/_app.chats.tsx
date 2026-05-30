@@ -14,7 +14,7 @@ type Conversation = {
   id: string;
   name: string | null;
   is_group: boolean;
-  last_message?: { content: string; created_at: string; type: string } | null;
+  last_message?: { content: string | null; created_at: string | null; type: string } | null;
   other?: Profile;
   member_ids: string[];
 };

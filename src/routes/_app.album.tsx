@@ -8,7 +8,7 @@ import { toast } from "sonner";
 
 export const Route = createFileRoute("/_app/album")({ component: AlbumPage });
 
-type Photo = { id: string; user_id: string; photo_url: string; caption: string; created_at: string };
+type Photo = { id: string; user_id: string; photo_url: string; caption: string | null; created_at: string | null };
 type Profile = { id: string; full_name: string; avatar_url: string | null };
 
 function AlbumPage() {
