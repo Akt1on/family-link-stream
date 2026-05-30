@@ -11,6 +11,7 @@ export const Route = createFileRoute("/_app/profile")({ component: ProfilePage }
 
 function ProfilePage() {
   const { user, signOut } = useAuth();
+  const { theme, toggleTheme, push_enabled, sound_enabled, setPushEnabled, setSoundEnabled } = useSettings();
   const [fullName, setFullName] = useState("");
   const [status, setStatus] = useState("");
   const [birthday, setBirthday] = useState("");
