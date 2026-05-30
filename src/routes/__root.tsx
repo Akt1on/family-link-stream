@@ -93,8 +93,11 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <Outlet />
-        <Toaster position="top-center" />
+        <SettingsProvider>
+          <GlobalNotifications />
+          <Outlet />
+          <Toaster position="top-center" />
+        </SettingsProvider>
       </AuthProvider>
     </QueryClientProvider>
   );
