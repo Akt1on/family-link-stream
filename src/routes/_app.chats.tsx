@@ -17,6 +17,7 @@ type Conversation = {
   last_message?: { content: string | null; created_at: string | null; type: string } | null;
   other?: Profile;
   member_ids: string[];
+  unread: number;
 };
 
 function ChatsPage() {
@@ -46,13 +47,18 @@ function ChatsPage() {
           .from("conversation_members").select("*").in("conversation_id", convIds);
         const { data: lastMsgs } = await supabase
           .from("messages").select("*").in("conversation_id", convIds).order("created_at", { ascending: false });
+        const { data: myReads } = await supabase
+          .from("message_reads").select("message_id").eq("user_id", user.id);
+        const readIds = new Set((myReads ?? []).map((r) => r.message_id));
 
         conversations = (convRows ?? []).map((c) => {
           const member_ids = (allMembers ?? []).filter((m) => m.conversation_id === c.id).map((m) => m.user_id);
-          const last = (lastMsgs ?? []).find((m) => m.conversation_id === c.id);
+          const convMsgs = (lastMsgs ?? []).filter((m) => m.conversation_id === c.id);
+          const last = convMsgs[0];
+          const unread = convMsgs.filter((m) => m.user_id !== user.id && !readIds.has(m.id)).length;
           const otherId = !c.is_group ? member_ids.find((id) => id !== user.id) : undefined;
           const other = otherId ? (allProfiles ?? []).find((p) => p.id === otherId) : undefined;
-          return { ...c, member_ids, last_message: last ?? null, other };
+          return { ...c, member_ids, last_message: last ?? null, other, unread };
         });
         conversations.sort((a, b) =>
           (b.last_message?.created_at ?? "").localeCompare(a.last_message?.created_at ?? "")
@@ -142,18 +148,25 @@ function ChatsPage() {
                 )}
                 <div className="min-w-0 flex-1">
                   <div className="flex items-baseline justify-between gap-2">
-                    <h3 className="truncate font-semibold">{c.is_group ? c.name : c.other?.full_name ?? "Без имени"}</h3>
-                    <span className="shrink-0 text-xs text-muted-foreground">
+                    <h3 className={`truncate ${c.unread > 0 ? "font-bold" : "font-semibold"}`}>{c.is_group ? c.name : c.other?.full_name ?? "Без имени"}</h3>
+                    <span className={`shrink-0 text-xs ${c.unread > 0 ? "text-primary font-semibold" : "text-muted-foreground"}`}>
                       {c.last_message?.created_at ? formatTime(c.last_message.created_at) : ""}
                     </span>
                   </div>
-                  <p className="truncate text-sm text-muted-foreground">
-                    {c.last_message
-                      ? c.last_message.type === "image" ? "📷 Фотография"
-                      : c.last_message.type === "voice" ? "🎤 Голосовое сообщение"
-                      : c.last_message.content
-                      : "Начните беседу"}
-                  </p>
+                  <div className="flex items-center justify-between gap-2">
+                    <p className={`truncate text-sm ${c.unread > 0 ? "text-foreground" : "text-muted-foreground"}`}>
+                      {c.last_message
+                        ? c.last_message.type === "image" ? "📷 Фотография"
+                        : c.last_message.type === "voice" ? "🎤 Голосовое сообщение"
+                        : c.last_message.content
+                        : "Начните беседу"}
+                    </p>
+                    {c.unread > 0 && (
+                      <span className="animate-pop ml-2 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[image:var(--gradient-peach)] px-1.5 text-[11px] font-bold text-white shadow-warm">
+                        {c.unread > 99 ? "99+" : c.unread}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </Link>
             </li>

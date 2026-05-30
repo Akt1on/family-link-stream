@@ -3,13 +3,15 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { Avatar } from "@/components/Avatar";
-import { Camera, LogOut, Save } from "lucide-react";
+import { Camera, LogOut, Save, Moon, Sun, Bell, Volume2 } from "lucide-react";
 import { toast } from "sonner";
+import { useSettings } from "@/lib/settings";
 
 export const Route = createFileRoute("/_app/profile")({ component: ProfilePage });
 
 function ProfilePage() {
   const { user, signOut } = useAuth();
+  const { theme, toggleTheme, push_enabled, sound_enabled, setPushEnabled, setSoundEnabled } = useSettings();
   const [fullName, setFullName] = useState("");
   const [status, setStatus] = useState("");
   const [birthday, setBirthday] = useState("");
@@ -89,12 +91,64 @@ function ProfilePage() {
           <Save className="h-4 w-4" /> {saving ? "Сохраняем..." : "Сохранить"}
         </button>
 
+        <div className="mt-4 space-y-2 rounded-3xl border border-border bg-card p-2">
+          <ToggleRow
+            icon={theme === "dark" ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
+            label="Тёмная тема"
+            description="Мягкие тёплые тона ночью"
+            checked={theme === "dark"}
+            onChange={toggleTheme}
+          />
+          <ToggleRow
+            icon={<Bell className="h-4 w-4" />}
+            label="Уведомления"
+            description="Сообщения и поздравления с ДР"
+            checked={push_enabled}
+            onChange={(v) => setPushEnabled(v)}
+          />
+          <ToggleRow
+            icon={<Volume2 className="h-4 w-4" />}
+            label="Звуки"
+            description="Мягкий сигнал при новом сообщении"
+            checked={sound_enabled}
+            onChange={(v) => setSoundEnabled(v)}
+          />
+        </div>
+
         <button onClick={signOut}
-          className="mt-2 flex w-full items-center justify-center gap-2 rounded-2xl border border-border bg-card py-3.5 font-semibold text-muted-foreground active:scale-[0.98]">
+          className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl border border-border bg-card py-3.5 font-semibold text-muted-foreground active:scale-[0.98]">
           <LogOut className="h-4 w-4" /> Выйти
         </button>
       </div>
     </div>
+  );
+}
+
+function ToggleRow({
+  icon, label, description, checked, onChange,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  description: string;
+  checked: boolean;
+  onChange: (v: boolean) => void;
+}) {
+  return (
+    <button
+      onClick={() => onChange(!checked)}
+      className="flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left transition active:bg-muted"
+    >
+      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-muted text-foreground">{icon}</div>
+      <div className="flex-1">
+        <div className="font-semibold">{label}</div>
+        <div className="text-xs text-muted-foreground">{description}</div>
+      </div>
+      <div className={`relative h-6 w-11 rounded-full transition ${checked ? "bg-[image:var(--gradient-peach)]" : "bg-muted"}`}>
+        <div
+          className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${checked ? "left-[22px]" : "left-0.5"}`}
+        />
+      </div>
+    </button>
   );
 }
 
