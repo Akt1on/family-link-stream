@@ -88,14 +88,38 @@ export type Database = {
         }
         Relationships: []
       }
+      message_reads: {
+        Row: {
+          conversation_id: string
+          message_id: string
+          read_at: string
+          user_id: string
+        }
+        Insert: {
+          conversation_id: string
+          message_id: string
+          read_at?: string
+          user_id: string
+        }
+        Update: {
+          conversation_id?: string
+          message_id?: string
+          read_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       messages: {
         Row: {
           content: string | null
           conversation_id: string
           created_at: string | null
+          edited_at: string | null
           id: string
+          link_preview: Json | null
           media_url: string | null
           pinned: boolean
+          reply_to_id: string | null
           type: string
           user_id: string
         }
@@ -103,9 +127,12 @@ export type Database = {
           content?: string | null
           conversation_id: string
           created_at?: string | null
+          edited_at?: string | null
           id?: string
+          link_preview?: Json | null
           media_url?: string | null
           pinned?: boolean
+          reply_to_id?: string | null
           type?: string
           user_id: string
         }
@@ -113,9 +140,12 @@ export type Database = {
           content?: string | null
           conversation_id?: string
           created_at?: string | null
+          edited_at?: string | null
           id?: string
+          link_preview?: Json | null
           media_url?: string | null
           pinned?: boolean
+          reply_to_id?: string | null
           type?: string
           user_id?: string
         }
@@ -213,6 +243,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      user_settings: {
+        Row: {
+          push_enabled: boolean
+          push_subscription: Json | null
+          sound_enabled: boolean
+          theme: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          push_enabled?: boolean
+          push_subscription?: Json | null
+          sound_enabled?: boolean
+          theme?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          push_enabled?: boolean
+          push_subscription?: Json | null
+          sound_enabled?: boolean
+          theme?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
     }
     Views: {
