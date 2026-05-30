@@ -3,8 +3,9 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { Avatar } from "@/components/Avatar";
-import { Camera, LogOut, Save } from "lucide-react";
+import { Camera, LogOut, Save, Moon, Sun, Bell, Volume2 } from "lucide-react";
 import { toast } from "sonner";
+import { useSettings } from "@/lib/settings";
 
 export const Route = createFileRoute("/_app/profile")({ component: ProfilePage });
 
