@@ -17,6 +17,7 @@ type Conversation = {
   last_message?: { content: string | null; created_at: string | null; type: string } | null;
   other?: Profile;
   member_ids: string[];
+  unread: number;
 };
 
 function ChatsPage() {
