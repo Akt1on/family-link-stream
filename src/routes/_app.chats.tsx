@@ -148,18 +148,25 @@ function ChatsPage() {
                 )}
                 <div className="min-w-0 flex-1">
                   <div className="flex items-baseline justify-between gap-2">
-                    <h3 className="truncate font-semibold">{c.is_group ? c.name : c.other?.full_name ?? "Без имени"}</h3>
-                    <span className="shrink-0 text-xs text-muted-foreground">
+                    <h3 className={`truncate ${c.unread > 0 ? "font-bold" : "font-semibold"}`}>{c.is_group ? c.name : c.other?.full_name ?? "Без имени"}</h3>
+                    <span className={`shrink-0 text-xs ${c.unread > 0 ? "text-primary font-semibold" : "text-muted-foreground"}`}>
                       {c.last_message?.created_at ? formatTime(c.last_message.created_at) : ""}
                     </span>
                   </div>
-                  <p className="truncate text-sm text-muted-foreground">
-                    {c.last_message
-                      ? c.last_message.type === "image" ? "📷 Фотография"
-                      : c.last_message.type === "voice" ? "🎤 Голосовое сообщение"
-                      : c.last_message.content
-                      : "Начните беседу"}
-                  </p>
+                  <div className="flex items-center justify-between gap-2">
+                    <p className={`truncate text-sm ${c.unread > 0 ? "text-foreground" : "text-muted-foreground"}`}>
+                      {c.last_message
+                        ? c.last_message.type === "image" ? "📷 Фотография"
+                        : c.last_message.type === "voice" ? "🎤 Голосовое сообщение"
+                        : c.last_message.content
+                        : "Начните беседу"}
+                    </p>
+                    {c.unread > 0 && (
+                      <span className="animate-pop ml-2 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[image:var(--gradient-peach)] px-1.5 text-[11px] font-bold text-white shadow-warm">
+                        {c.unread > 99 ? "99+" : c.unread}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </Link>
             </li>
