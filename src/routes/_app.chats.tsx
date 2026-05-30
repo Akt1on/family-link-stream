@@ -47,13 +47,18 @@ function ChatsPage() {
           .from("conversation_members").select("*").in("conversation_id", convIds);
         const { data: lastMsgs } = await supabase
           .from("messages").select("*").in("conversation_id", convIds).order("created_at", { ascending: false });
+        const { data: myReads } = await supabase
+          .from("message_reads").select("message_id").eq("user_id", user.id);
+        const readIds = new Set((myReads ?? []).map((r) => r.message_id));
 
         conversations = (convRows ?? []).map((c) => {
           const member_ids = (allMembers ?? []).filter((m) => m.conversation_id === c.id).map((m) => m.user_id);
-          const last = (lastMsgs ?? []).find((m) => m.conversation_id === c.id);
+          const convMsgs = (lastMsgs ?? []).filter((m) => m.conversation_id === c.id);
+          const last = convMsgs[0];
+          const unread = convMsgs.filter((m) => m.user_id !== user.id && !readIds.has(m.id)).length;
           const otherId = !c.is_group ? member_ids.find((id) => id !== user.id) : undefined;
           const other = otherId ? (allProfiles ?? []).find((p) => p.id === otherId) : undefined;
-          return { ...c, member_ids, last_message: last ?? null, other };
+          return { ...c, member_ids, last_message: last ?? null, other, unread };
         });
         conversations.sort((a, b) =>
           (b.last_message?.created_at ?? "").localeCompare(a.last_message?.created_at ?? "")
