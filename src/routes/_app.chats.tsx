@@ -144,7 +144,7 @@ function ChatsPage() {
                   <div className="flex items-baseline justify-between gap-2">
                     <h3 className="truncate font-semibold">{c.is_group ? c.name : c.other?.full_name ?? "Без имени"}</h3>
                     <span className="shrink-0 text-xs text-muted-foreground">
-                      {c.last_message ? formatTime(c.last_message.created_at) : ""}
+                      {c.last_message?.created_at ? formatTime(c.last_message.created_at) : ""}
                     </span>
                   </div>
                   <p className="truncate text-sm text-muted-foreground">

@@ -75,7 +75,7 @@ function AlbumPage() {
           {photos.map((p, i) => (
             <button key={p.id} onClick={() => setViewing(p)} style={{ animationDelay: `${i * 20}ms` }}
               className="animate-float-in aspect-square overflow-hidden rounded-lg bg-muted active:opacity-80">
-              <img src={p.photo_url} alt={p.caption} loading="lazy" className="h-full w-full object-cover" />
+              <img src={p.photo_url} alt={p.caption ?? ""} loading="lazy" className="h-full w-full object-cover" />
             </button>
           ))}
         </div>
@@ -88,7 +88,7 @@ function AlbumPage() {
               <Avatar name={profiles[viewing.user_id]?.full_name} url={profiles[viewing.user_id]?.avatar_url} userId={viewing.user_id} size={36} />
               <div>
                 <p className="text-sm font-semibold">{profiles[viewing.user_id]?.full_name}</p>
-                <p className="text-xs text-white/60">{new Date(viewing.created_at).toLocaleDateString("ru-RU")}</p>
+                <p className="text-xs text-white/60">{viewing.created_at ? new Date(viewing.created_at).toLocaleDateString("ru-RU") : ""}</p>
               </div>
             </div>
             <button onClick={() => setViewing(null)} className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10"><X className="h-5 w-5" /></button>

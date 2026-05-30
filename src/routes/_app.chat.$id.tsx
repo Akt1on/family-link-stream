@@ -234,7 +234,7 @@ function ChatPage() {
                   {m.content && <p className="whitespace-pre-wrap break-words text-[15px] leading-snug">{m.content}</p>}
                   <div className="mt-0.5 flex items-center justify-end gap-1 text-[10px] opacity-70">
                     {m.pinned && <Pin className="h-2.5 w-2.5" />}
-                    <span>{formatTime(m.created_at)}</span>
+                    <span>{m.created_at ? formatTime(m.created_at) : ""}</span>
                   </div>
                 </button>
                 {grouped.length > 0 && (
