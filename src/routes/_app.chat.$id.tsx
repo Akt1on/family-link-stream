@@ -71,6 +71,9 @@ function ChatPage() {
   const swipeRef = useRef<{ id: string; startX: number; dx: number } | null>(null);
   const [swipeId, setSwipeId] = useState<string | null>(null);
   const [swipeDx, setSwipeDx] = useState(0);
+  const [attachOpen, setAttachOpen] = useState(false);
+  const [videoOpen, setVideoOpen] = useState(false);
+  const [sendingLoc, setSendingLoc] = useState(false);
 
   const profilesById = useMemo(
     () => Object.fromEntries(members.map((m) => [m.id, m])),
