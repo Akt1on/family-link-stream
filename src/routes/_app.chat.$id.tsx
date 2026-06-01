@@ -520,6 +520,8 @@ function ChatPage() {
               <div className="truncate opacity-80">
                 {replyTo.type === "image" ? "📷 Фотография"
                   : replyTo.type === "voice" ? "🎤 Голосовое"
+                  : replyTo.type === "video" ? "🎥 Видео-кружок"
+                  : replyTo.type === "location" ? "📍 Геолокация"
                   : replyTo.content}
               </div>
             </div>
