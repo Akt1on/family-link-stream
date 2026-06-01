@@ -6,7 +6,7 @@ import { useAuth } from "@/lib/auth";
 import { Avatar } from "@/components/Avatar";
 import {
   ArrowLeft, Send, Mic, Image as ImageIcon, Smile, Phone, Pin, Square, X,
-  Reply, Check, CheckCheck,
+  Reply, Check, CheckCheck, Video, MapPin, Plus,
 } from "lucide-react";
 import { formatTime, isOnline } from "@/lib/utils-app";
 import { toast } from "sonner";
@@ -14,7 +14,16 @@ import { EmojiPicker } from "@/components/EmojiPicker";
 import { Lightbox } from "@/components/Lightbox";
 import { VoicePlayer } from "@/components/VoicePlayer";
 import { LinkPreview } from "@/components/LinkPreview";
+import { VideoCircle } from "@/components/VideoCircle";
+import { VideoRecorder } from "@/components/VideoRecorder";
+import { LocationMessage } from "@/components/LocationMessage";
 import { fetchLinkPreview } from "@/lib/og.functions";
+
+function parseGeo(url: string | null): { lat: number; lng: number } | null {
+  if (!url) return null;
+  const m = url.match(/^geo:(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/);
+  return m ? { lat: parseFloat(m[1]), lng: parseFloat(m[2]) } : null;
+}
 
 export const Route = createFileRoute("/_app/chat/$id")({ component: ChatPage });
 
