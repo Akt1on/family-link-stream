@@ -6,7 +6,7 @@ import { useAuth } from "@/lib/auth";
 import { Avatar } from "@/components/Avatar";
 import {
   ArrowLeft, Send, Mic, Image as ImageIcon, Smile, Phone, Pin, Square, X,
-  Reply, Check, CheckCheck,
+  Reply, Check, CheckCheck, Video, MapPin, Plus,
 } from "lucide-react";
 import { formatTime, isOnline } from "@/lib/utils-app";
 import { toast } from "sonner";
@@ -14,7 +14,16 @@ import { EmojiPicker } from "@/components/EmojiPicker";
 import { Lightbox } from "@/components/Lightbox";
 import { VoicePlayer } from "@/components/VoicePlayer";
 import { LinkPreview } from "@/components/LinkPreview";
+import { VideoCircle } from "@/components/VideoCircle";
+import { VideoRecorder } from "@/components/VideoRecorder";
+import { LocationMessage } from "@/components/LocationMessage";
 import { fetchLinkPreview } from "@/lib/og.functions";
+
+function parseGeo(url: string | null): { lat: number; lng: number } | null {
+  if (!url) return null;
+  const m = url.match(/^geo:(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/);
+  return m ? { lat: parseFloat(m[1]), lng: parseFloat(m[2]) } : null;
+}
 
 export const Route = createFileRoute("/_app/chat/$id")({ component: ChatPage });
 
@@ -62,6 +71,9 @@ function ChatPage() {
   const swipeRef = useRef<{ id: string; startX: number; dx: number } | null>(null);
   const [swipeId, setSwipeId] = useState<string | null>(null);
   const [swipeDx, setSwipeDx] = useState(0);
+  const [attachOpen, setAttachOpen] = useState(false);
+  const [videoOpen, setVideoOpen] = useState(false);
+  const [sendingLoc, setSendingLoc] = useState(false);
 
   const profilesById = useMemo(
     () => Object.fromEntries(members.map((m) => [m.id, m])),
@@ -200,7 +212,7 @@ function ChatPage() {
     supabase.from("typing_indicators").delete().eq("conversation_id", id).eq("user_id", user.id);
   };
 
-  const uploadAndSend = async (file: File, type: "image" | "voice") => {
+  const uploadAndSend = async (file: File, type: "image" | "voice" | "video") => {
     if (!user) return;
     const ext = file.name.split(".").pop() || (type === "image" ? "jpg" : "webm");
     const path = `${user.id}/${Date.now()}.${ext}`;
@@ -215,6 +227,36 @@ function ChatPage() {
     if (f) await uploadAndSend(f, "image");
     e.target.value = "";
   };
+
+  const shareLocation = async () => {
+    if (!user || sendingLoc) return;
+    if (!navigator.geolocation) { toast.error("Геолокация не поддерживается"); return; }
+    setSendingLoc(true);
+    setAttachOpen(false);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const { latitude, longitude } = pos.coords;
+        let address = "";
+        try {
+          const r = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=16&accept-language=ru`,
+            { headers: { "Accept": "application/json" } },
+          );
+          const data = await r.json();
+          address = data?.display_name ?? "";
+        } catch {}
+        await send({
+          type: "location",
+          media_url: `geo:${latitude},${longitude}`,
+          content: address,
+        });
+        setSendingLoc(false);
+      },
+      () => { toast.error("Не удалось получить геолокацию"); setSendingLoc(false); },
+      { enableHighAccuracy: true, timeout: 10000 },
+    );
+  };
+
 
   const startRecord = async () => {
     try {
@@ -375,6 +417,8 @@ function ChatPage() {
                       <div className="truncate opacity-80">
                         {replied.type === "image" ? "📷 Фотография"
                           : replied.type === "voice" ? "🎤 Голосовое"
+                          : replied.type === "video" ? "🎥 Видео-кружок"
+                          : replied.type === "location" ? "📍 Геолокация"
                           : replied.content}
                       </div>
                     </div>
@@ -393,7 +437,14 @@ function ChatPage() {
                   {m.type === "voice" && m.media_url && (
                     <VoicePlayer url={m.media_url} mine={mine} />
                   )}
-                  {m.content && <p className="whitespace-pre-wrap break-words text-[15px] leading-snug">{m.content}</p>}
+                  {m.type === "video" && m.media_url && (
+                    <VideoCircle url={m.media_url} mine={mine} />
+                  )}
+                  {m.type === "location" && (() => {
+                    const geo = parseGeo(m.media_url);
+                    return geo ? <LocationMessage lat={geo.lat} lng={geo.lng} address={m.content} mine={mine} /> : null;
+                  })()}
+                  {m.type !== "location" && m.content && <p className="whitespace-pre-wrap break-words text-[15px] leading-snug">{m.content}</p>}
                   {m.link_preview && <LinkPreview preview={m.link_preview} mine={mine} />}
                   <div className="mt-0.5 flex items-center justify-end gap-1 text-[10px] opacity-70">
                     {m.pinned && <Pin className="h-2.5 w-2.5" />}
@@ -469,6 +520,8 @@ function ChatPage() {
               <div className="truncate opacity-80">
                 {replyTo.type === "image" ? "📷 Фотография"
                   : replyTo.type === "voice" ? "🎤 Голосовое"
+                  : replyTo.type === "video" ? "🎥 Видео-кружок"
+                  : replyTo.type === "location" ? "📍 Геолокация"
                   : replyTo.content}
               </div>
             </div>
@@ -492,10 +545,39 @@ function ChatPage() {
                 onClose={() => setEmojiOpen(false)}
               />
             )}
-            <label className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full bg-muted text-muted-foreground active:scale-95">
-              <ImageIcon className="h-5 w-5" />
-              <input type="file" accept="image/*" className="hidden" onChange={onPickImage} />
-            </label>
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setAttachOpen((v) => !v)}
+                className={`flex h-10 w-10 items-center justify-center rounded-full transition active:scale-95 ${attachOpen ? "rotate-45 bg-[image:var(--gradient-sky)] text-white" : "bg-muted text-muted-foreground"}`}
+              >
+                <Plus className="h-5 w-5" />
+              </button>
+              {attachOpen && (
+                <>
+                  <div className="fixed inset-0 z-10" onClick={() => setAttachOpen(false)} />
+                  <div className="absolute bottom-12 left-0 z-20 flex w-44 flex-col gap-1 rounded-2xl border border-border bg-card p-2 shadow-warm animate-float-in">
+                    <label className="flex cursor-pointer items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition hover:bg-muted">
+                      <ImageIcon className="h-4 w-4 text-primary" /> Фото
+                      <input type="file" accept="image/*" className="hidden" onChange={(e) => { setAttachOpen(false); onPickImage(e); }} />
+                    </label>
+                    <button
+                      onClick={() => { setAttachOpen(false); setVideoOpen(true); }}
+                      className="flex items-center gap-2 rounded-xl px-3 py-2 text-left text-sm font-medium transition hover:bg-muted"
+                    >
+                      <Video className="h-4 w-4 text-peach-foreground" /> Видео-кружок
+                    </button>
+                    <button
+                      onClick={shareLocation}
+                      disabled={sendingLoc}
+                      className="flex items-center gap-2 rounded-xl px-3 py-2 text-left text-sm font-medium transition hover:bg-muted disabled:opacity-60"
+                    >
+                      <MapPin className="h-4 w-4 text-destructive" /> {sendingLoc ? "Поиск…" : "Геолокация"}
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
             <button
               type="button"
               onClick={() => setEmojiOpen((v) => !v)}
@@ -522,6 +604,16 @@ function ChatPage() {
           </div>
         )}
       </div>
+
+      {videoOpen && (
+        <VideoRecorder
+          onCancel={() => setVideoOpen(false)}
+          onSend={async (file) => {
+            setVideoOpen(false);
+            await uploadAndSend(file, "video");
+          }}
+        />
+      )}
     </div>
   );
 }

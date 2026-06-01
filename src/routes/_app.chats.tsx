@@ -158,6 +158,8 @@ function ChatsPage() {
                       {c.last_message
                         ? c.last_message.type === "image" ? "📷 Фотография"
                         : c.last_message.type === "voice" ? "🎤 Голосовое сообщение"
+                        : c.last_message.type === "video" ? "🎥 Видео-кружок"
+                        : c.last_message.type === "location" ? "📍 Геолокация"
                         : c.last_message.content
                         : "Начните беседу"}
                     </p>
