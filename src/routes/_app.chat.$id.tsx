@@ -545,10 +545,39 @@ function ChatPage() {
                 onClose={() => setEmojiOpen(false)}
               />
             )}
-            <label className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full bg-muted text-muted-foreground active:scale-95">
-              <ImageIcon className="h-5 w-5" />
-              <input type="file" accept="image/*" className="hidden" onChange={onPickImage} />
-            </label>
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setAttachOpen((v) => !v)}
+                className={`flex h-10 w-10 items-center justify-center rounded-full transition active:scale-95 ${attachOpen ? "rotate-45 bg-[image:var(--gradient-sky)] text-white" : "bg-muted text-muted-foreground"}`}
+              >
+                <Plus className="h-5 w-5" />
+              </button>
+              {attachOpen && (
+                <>
+                  <div className="fixed inset-0 z-10" onClick={() => setAttachOpen(false)} />
+                  <div className="absolute bottom-12 left-0 z-20 flex w-44 flex-col gap-1 rounded-2xl border border-border bg-card p-2 shadow-warm animate-float-in">
+                    <label className="flex cursor-pointer items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition hover:bg-muted">
+                      <ImageIcon className="h-4 w-4 text-primary" /> Фото
+                      <input type="file" accept="image/*" className="hidden" onChange={(e) => { setAttachOpen(false); onPickImage(e); }} />
+                    </label>
+                    <button
+                      onClick={() => { setAttachOpen(false); setVideoOpen(true); }}
+                      className="flex items-center gap-2 rounded-xl px-3 py-2 text-left text-sm font-medium transition hover:bg-muted"
+                    >
+                      <Video className="h-4 w-4 text-peach-foreground" /> Видео-кружок
+                    </button>
+                    <button
+                      onClick={shareLocation}
+                      disabled={sendingLoc}
+                      className="flex items-center gap-2 rounded-xl px-3 py-2 text-left text-sm font-medium transition hover:bg-muted disabled:opacity-60"
+                    >
+                      <MapPin className="h-4 w-4 text-destructive" /> {sendingLoc ? "Поиск…" : "Геолокация"}
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
             <button
               type="button"
               onClick={() => setEmojiOpen((v) => !v)}
