@@ -212,7 +212,7 @@ function ChatPage() {
     supabase.from("typing_indicators").delete().eq("conversation_id", id).eq("user_id", user.id);
   };
 
-  const uploadAndSend = async (file: File, type: "image" | "voice") => {
+  const uploadAndSend = async (file: File, type: "image" | "voice" | "video") => {
     if (!user) return;
     const ext = file.name.split(".").pop() || (type === "image" ? "jpg" : "webm");
     const path = `${user.id}/${Date.now()}.${ext}`;
@@ -227,6 +227,36 @@ function ChatPage() {
     if (f) await uploadAndSend(f, "image");
     e.target.value = "";
   };
+
+  const shareLocation = async () => {
+    if (!user || sendingLoc) return;
+    if (!navigator.geolocation) { toast.error("Геолокация не поддерживается"); return; }
+    setSendingLoc(true);
+    setAttachOpen(false);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const { latitude, longitude } = pos.coords;
+        let address = "";
+        try {
+          const r = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=16&accept-language=ru`,
+            { headers: { "Accept": "application/json" } },
+          );
+          const data = await r.json();
+          address = data?.display_name ?? "";
+        } catch {}
+        await send({
+          type: "location",
+          media_url: `geo:${latitude},${longitude}`,
+          content: address,
+        });
+        setSendingLoc(false);
+      },
+      () => { toast.error("Не удалось получить геолокацию"); setSendingLoc(false); },
+      { enableHighAccuracy: true, timeout: 10000 },
+    );
+  };
+
 
   const startRecord = async () => {
     try {
