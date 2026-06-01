@@ -604,6 +604,16 @@ function ChatPage() {
           </div>
         )}
       </div>
+
+      {videoOpen && (
+        <VideoRecorder
+          onCancel={() => setVideoOpen(false)}
+          onSend={async (file) => {
+            setVideoOpen(false);
+            await uploadAndSend(file, "video");
+          }}
+        />
+      )}
     </div>
   );
 }
