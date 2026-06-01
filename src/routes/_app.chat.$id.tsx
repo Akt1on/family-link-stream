@@ -435,7 +435,14 @@ function ChatPage() {
                   {m.type === "voice" && m.media_url && (
                     <VoicePlayer url={m.media_url} mine={mine} />
                   )}
-                  {m.content && <p className="whitespace-pre-wrap break-words text-[15px] leading-snug">{m.content}</p>}
+                  {m.type === "video" && m.media_url && (
+                    <VideoCircle url={m.media_url} mine={mine} />
+                  )}
+                  {m.type === "location" && (() => {
+                    const geo = parseGeo(m.media_url);
+                    return geo ? <LocationMessage lat={geo.lat} lng={geo.lng} address={m.content} mine={mine} /> : null;
+                  })()}
+                  {m.type !== "location" && m.content && <p className="whitespace-pre-wrap break-words text-[15px] leading-snug">{m.content}</p>}
                   {m.link_preview && <LinkPreview preview={m.link_preview} mine={mine} />}
                   <div className="mt-0.5 flex items-center justify-end gap-1 text-[10px] opacity-70">
                     {m.pinned && <Pin className="h-2.5 w-2.5" />}
