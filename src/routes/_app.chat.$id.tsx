@@ -417,6 +417,8 @@ function ChatPage() {
                       <div className="truncate opacity-80">
                         {replied.type === "image" ? "📷 Фотография"
                           : replied.type === "voice" ? "🎤 Голосовое"
+                          : replied.type === "video" ? "🎥 Видео-кружок"
+                          : replied.type === "location" ? "📍 Геолокация"
                           : replied.content}
                       </div>
                     </div>
