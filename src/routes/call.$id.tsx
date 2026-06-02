@@ -3,7 +3,12 @@ import { useEffect, useRef } from "react";
 import { useAuth } from "@/lib/auth";
 import { ArrowLeft } from "lucide-react";
 
-export const Route = createFileRoute("/call/$id")({ component: CallPage });
+export const Route = createFileRoute("/call/$id")({
+  component: CallPage,
+  validateSearch: (s: Record<string, unknown>) => ({
+    mode: s.mode === "audio" ? "audio" as const : "video" as const,
+  }),
+});
 
 declare global {
   interface Window { JitsiMeetExternalAPI?: any }
