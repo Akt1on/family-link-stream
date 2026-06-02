@@ -40,18 +40,24 @@ export type Database = {
       }
       conversation_members: {
         Row: {
+          archived_at: string | null
           conversation_id: string
           joined_at: string | null
+          pinned_at: string | null
           user_id: string
         }
         Insert: {
+          archived_at?: string | null
           conversation_id: string
           joined_at?: string | null
+          pinned_at?: string | null
           user_id: string
         }
         Update: {
+          archived_at?: string | null
           conversation_id?: string
           joined_at?: string | null
+          pinned_at?: string | null
           user_id?: string
         }
         Relationships: [
@@ -115,9 +121,11 @@ export type Database = {
           conversation_id: string
           created_at: string | null
           edited_at: string | null
+          forwarded_from_conversation_id: string | null
           id: string
           link_preview: Json | null
           media_url: string | null
+          mention_user_ids: string[] | null
           pinned: boolean
           reply_to_id: string | null
           type: string
@@ -128,9 +136,11 @@ export type Database = {
           conversation_id: string
           created_at?: string | null
           edited_at?: string | null
+          forwarded_from_conversation_id?: string | null
           id?: string
           link_preview?: Json | null
           media_url?: string | null
+          mention_user_ids?: string[] | null
           pinned?: boolean
           reply_to_id?: string | null
           type?: string
@@ -141,9 +151,11 @@ export type Database = {
           conversation_id?: string
           created_at?: string | null
           edited_at?: string | null
+          forwarded_from_conversation_id?: string | null
           id?: string
           link_preview?: Json | null
           media_url?: string | null
+          mention_user_ids?: string[] | null
           pinned?: boolean
           reply_to_id?: string | null
           type?: string
