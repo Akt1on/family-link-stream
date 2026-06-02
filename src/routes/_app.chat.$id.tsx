@@ -93,27 +93,28 @@ function ChatPage() {
     let mounted = true;
 
     const load = async () => {
-      const [{ data: c }, { data: m }, { data: msgs }, { data: rs }] = await Promise.all([
+      const [{ data: c }, { data: m }, { data: msgs }] = await Promise.all([
         supabase.from("conversations").select("name, is_group").eq("id", id).maybeSingle(),
         supabase.from("conversation_members").select("user_id").eq("conversation_id", id),
         supabase.from("messages").select("*").eq("conversation_id", id).order("created_at", { ascending: true }).limit(500),
-        supabase.from("reactions").select("*"),
       ]);
       const memberIds = (m ?? []).map((x) => x.user_id);
-      const { data: profs } = memberIds.length
-        ? await supabase.from("profiles").select("*").in("id", memberIds)
-        : { data: [] as Profile[] };
-      const { data: rd } = await supabase
-        .from("message_reads")
-        .select("message_id, user_id")
-        .eq("conversation_id", id);
+      const msgIds = (msgs ?? []).map((x) => x.id);
+      const [{ data: profs }, { data: rs }, { data: rd }] = await Promise.all([
+        memberIds.length
+          ? supabase.from("profiles").select("*").in("id", memberIds)
+          : Promise.resolve({ data: [] as Profile[] } as any),
+        msgIds.length
+          ? supabase.from("reactions").select("*").in("message_id", msgIds)
+          : Promise.resolve({ data: [] as Reaction[] } as any),
+        supabase.from("message_reads").select("message_id, user_id").eq("conversation_id", id),
+      ]);
       if (!mounted) return;
       setConv(c);
       setMembers(profs ?? []);
       setMessages((msgs ?? []) as Message[]);
       setReads((rd ?? []) as Read[]);
-      const msgIds = new Set((msgs ?? []).map((x) => x.id));
-      setReactions((rs ?? []).filter((r) => msgIds.has(r.message_id)));
+      setReactions((rs ?? []) as Reaction[]);
     };
     load();
 
