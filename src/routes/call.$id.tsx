@@ -56,7 +56,7 @@ function CallPage() {
     }
 
     return () => { try { apiRef.current?.dispose(); } catch {} };
-  }, [id, user?.id]);
+  }, [id, user?.id, mode]);
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-black">
