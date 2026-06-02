@@ -354,7 +354,18 @@ function ChatPage() {
               {typingIds.length > 0 ? <span className="text-primary">печатает<span className="typing-dot ml-1" /><span className="typing-dot" /><span className="typing-dot" /></span> : subtitle}
             </p>
           </div>
-          <button onClick={() => navigate({ to: "/call/$id", params: { id } })} className="flex h-10 w-10 items-center justify-center rounded-full bg-[image:var(--gradient-peach)] text-white shadow-warm active:scale-95">
+          <button
+            onClick={() => navigate({ to: "/call/$id", params: { id }, search: { mode: "video" } })}
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-[image:var(--gradient-sky)] text-white shadow-soft active:scale-95"
+            aria-label="Видеозвонок"
+          >
+            <Video className="h-5 w-5" />
+          </button>
+          <button
+            onClick={() => navigate({ to: "/call/$id", params: { id }, search: { mode: "audio" } })}
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-[image:var(--gradient-peach)] text-white shadow-warm active:scale-95"
+            aria-label="Аудиозвонок"
+          >
             <Phone className="h-5 w-5" />
           </button>
         </div>
