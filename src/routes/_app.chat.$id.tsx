@@ -6,7 +6,8 @@ import { useAuth } from "@/lib/auth";
 import { Avatar } from "@/components/Avatar";
 import {
   ArrowLeft, Send, Mic, Image as ImageIcon, Smile, Phone, Pin, Square, X,
-  Reply, Check, CheckCheck, Video, MapPin, Plus,
+  Reply, Check, CheckCheck, Video, MapPin, Plus, Search, Pencil, Trash2, Forward,
+  ChevronDown,
 } from "lucide-react";
 import { formatTime, isOnline } from "@/lib/utils-app";
 import { toast } from "sonner";
@@ -17,7 +18,10 @@ import { LinkPreview } from "@/components/LinkPreview";
 import { VideoCircle } from "@/components/VideoCircle";
 import { VideoRecorder } from "@/components/VideoRecorder";
 import { LocationMessage } from "@/components/LocationMessage";
+import { ForwardDialog } from "@/components/ForwardDialog";
+import { MessageText } from "@/components/MessageText";
 import { fetchLinkPreview } from "@/lib/og.functions";
+import { haptic } from "@/lib/haptics";
 
 function parseGeo(url: string | null): { lat: number; lng: number } | null {
   if (!url) return null;
@@ -25,7 +29,12 @@ function parseGeo(url: string | null): { lat: number; lng: number } | null {
   return m ? { lat: parseFloat(m[1]), lng: parseFloat(m[2]) } : null;
 }
 
-export const Route = createFileRoute("/_app/chat/$id")({ component: ChatPage });
+export const Route = createFileRoute("/_app/chat/$id")({
+  component: ChatPage,
+  validateSearch: (s: Record<string, unknown>) => ({
+    q: typeof s.q === "string" ? s.q : undefined,
+  }),
+});
 
 type Profile = { id: string; full_name: string; avatar_url: string | null; last_seen: string | null };
 type LinkPreviewData = {
