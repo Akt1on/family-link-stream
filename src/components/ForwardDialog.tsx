@@ -91,7 +91,7 @@ export function ForwardDialog({ message, onClose }: Props) {
       link_preview: message.link_preview ?? null,
       forwarded_from_conversation_id: message.conversation_id,
     }));
-    const { error } = await supabase.from("messages").insert(rows);
+    const { error } = await supabase.from("messages").insert(rows as any);
     setSending(false);
     if (error) { toast.error(error.message); return; }
     haptic("success");
