@@ -129,7 +129,9 @@ function ChatPage() {
       .on("postgres_changes", { event: "DELETE", schema: "public", table: "messages" },
         (payload) => setMessages((m) => m.filter((x) => x.id !== (payload.old as any).id)))
       .on("postgres_changes", { event: "*", schema: "public", table: "reactions" }, async () => {
-        const { data: rs } = await supabase.from("reactions").select("*");
+        const ids = (messages.length ? messages : []).map((x) => x.id);
+        if (!ids.length) return;
+        const { data: rs } = await supabase.from("reactions").select("*").in("message_id", ids);
         setReactions((rs ?? []) as Reaction[]);
       })
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "message_reads", filter: `conversation_id=eq.${id}` },
