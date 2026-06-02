@@ -6,7 +6,8 @@ import { useAuth } from "@/lib/auth";
 import { Avatar } from "@/components/Avatar";
 import {
   ArrowLeft, Send, Mic, Image as ImageIcon, Smile, Phone, Pin, Square, X,
-  Reply, Check, CheckCheck, Video, MapPin, Plus,
+  Reply, Check, CheckCheck, Video, MapPin, Plus, Search, Pencil, Trash2, Forward,
+  ChevronDown,
 } from "lucide-react";
 import { formatTime, isOnline } from "@/lib/utils-app";
 import { toast } from "sonner";
@@ -17,7 +18,10 @@ import { LinkPreview } from "@/components/LinkPreview";
 import { VideoCircle } from "@/components/VideoCircle";
 import { VideoRecorder } from "@/components/VideoRecorder";
 import { LocationMessage } from "@/components/LocationMessage";
+import { ForwardDialog } from "@/components/ForwardDialog";
+import { MessageText } from "@/components/MessageText";
 import { fetchLinkPreview } from "@/lib/og.functions";
+import { haptic } from "@/lib/haptics";
 
 function parseGeo(url: string | null): { lat: number; lng: number } | null {
   if (!url) return null;
@@ -25,7 +29,12 @@ function parseGeo(url: string | null): { lat: number; lng: number } | null {
   return m ? { lat: parseFloat(m[1]), lng: parseFloat(m[2]) } : null;
 }
 
-export const Route = createFileRoute("/_app/chat/$id")({ component: ChatPage });
+export const Route = createFileRoute("/_app/chat/$id")({
+  component: ChatPage,
+  validateSearch: (s: Record<string, unknown>) => ({
+    q: typeof s.q === "string" ? s.q : undefined,
+  }),
+});
 
 type Profile = { id: string; full_name: string; avatar_url: string | null; last_seen: string | null };
 type LinkPreviewData = {
@@ -39,6 +48,9 @@ type Message = {
   id: string; conversation_id: string; user_id: string; content: string | null; type: string;
   media_url: string | null; pinned: boolean; created_at: string | null;
   reply_to_id: string | null; link_preview: LinkPreviewData | null;
+  edited_at?: string | null;
+  mention_user_ids?: string[] | null;
+  forwarded_from_conversation_id?: string | null;
 };
 type Reaction = { message_id: string; user_id: string; emoji: string };
 type Read = { message_id: string; user_id: string };
@@ -48,6 +60,7 @@ const URL_RE = /(https?:\/\/[^\s]+)/i;
 
 function ChatPage() {
   const { id } = Route.useParams();
+  const { q: initialQuery } = Route.useSearch();
   const { user } = useAuth();
   const navigate = useNavigate();
   const fetchPreview = useServerFn(fetchLinkPreview);
@@ -74,6 +87,16 @@ function ChatPage() {
   const [attachOpen, setAttachOpen] = useState(false);
   const [videoOpen, setVideoOpen] = useState(false);
   const [sendingLoc, setSendingLoc] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [forwardMsg, setForwardMsg] = useState<Message | null>(null);
+  const [showSearch, setShowSearch] = useState<boolean>(!!initialQuery);
+  const [searchTerm, setSearchTerm] = useState<string>(initialQuery ?? "");
+  const [searchIdx, setSearchIdx] = useState<number>(0);
+  const [mentionOpen, setMentionOpen] = useState<{ q: string; start: number } | null>(null);
+  const [isAtBottom, setIsAtBottom] = useState(true);
+  const [newCount, setNewCount] = useState(0);
+  const messageRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const textareaRef = useRef<HTMLInputElement>(null);
 
   const profilesById = useMemo(
     () => Object.fromEntries(members.map((m) => [m.id, m])),
@@ -170,9 +193,51 @@ function ChatPage() {
     ]);
   }, [messages, user?.id, id]);
 
+  // Smart auto-scroll: only when user is near the bottom
+  const prevLenRef = useRef(0);
   useEffect(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
-  }, [messages.length, typingIds.length]);
+    const el = scrollRef.current;
+    if (!el) return;
+    const grew = messages.length > prevLenRef.current;
+    prevLenRef.current = messages.length;
+    if (isAtBottom) {
+      el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+      setNewCount(0);
+    } else if (grew) {
+      const last = messages[messages.length - 1];
+      if (last && last.user_id !== user?.id) setNewCount((c) => c + 1);
+    }
+  }, [messages.length, typingIds.length, isAtBottom, user?.id]);
+
+  // Track if at bottom
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const onScroll = () => {
+      const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+      setIsAtBottom(atBottom);
+      if (atBottom) setNewCount(0);
+    };
+    el.addEventListener("scroll", onScroll, { passive: true });
+    return () => el.removeEventListener("scroll", onScroll);
+  }, []);
+
+  // Search navigation: jump to matches
+  const searchMatches = useMemo(() => {
+    const q = searchTerm.trim().toLowerCase();
+    if (q.length < 2) return [];
+    return messages.filter((m) => (m.content ?? "").toLowerCase().includes(q));
+  }, [messages, searchTerm]);
+
+  useEffect(() => {
+    if (searchMatches.length === 0) return;
+    const idx = Math.min(searchIdx, searchMatches.length - 1);
+    const el = messageRefs.current[searchMatches[idx].id];
+    el?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [searchIdx, searchMatches]);
+
+  useEffect(() => { setSearchIdx(0); }, [searchTerm]);
+
 
   const sendTyping = () => {
     if (!user) return;
@@ -294,7 +359,39 @@ function ChatPage() {
   };
 
   const togglePin = async (m: Message) => {
+    haptic("light");
     await supabase.from("messages").update({ pinned: !m.pinned }).eq("id", m.id);
+  };
+
+  const startEdit = (m: Message) => {
+    if (m.user_id !== user?.id) return;
+    haptic("light");
+    setEditingId(m.id);
+    setText(m.content ?? "");
+    setReplyTo(null);
+    setTimeout(() => textareaRef.current?.focus(), 50);
+  };
+
+  const cancelEdit = () => { setEditingId(null); setText(""); };
+
+  const saveEdit = async () => {
+    if (!editingId) return;
+    const content = text.trim();
+    if (!content) return;
+    const { error } = await supabase.from("messages")
+      .update({ content, edited_at: new Date().toISOString() })
+      .eq("id", editingId);
+    if (error) { toast.error(error.message); return; }
+    haptic("success");
+    cancelEdit();
+  };
+
+  const deleteMessage = async (m: Message) => {
+    if (m.user_id !== user?.id) return;
+    if (!confirm("Удалить сообщение?")) return;
+    haptic("warning");
+    const { error } = await supabase.from("messages").delete().eq("id", m.id);
+    if (error) toast.error(error.message);
   };
 
   // Swipe to reply (touch)
@@ -458,7 +555,15 @@ function ChatPage() {
                     const geo = parseGeo(m.media_url);
                     return geo ? <LocationMessage lat={geo.lat} lng={geo.lng} address={m.content} mine={mine} /> : null;
                   })()}
-                  {m.type !== "location" && m.content && <p className="whitespace-pre-wrap break-words text-[15px] leading-snug">{m.content}</p>}
+                  {m.type !== "location" && m.content && (
+                    <MessageText
+                      text={m.content}
+                      mine={mine}
+                      mentions={Object.fromEntries(members.map((mm) => [mm.id, mm.full_name]))}
+                      highlight={searchTerm.trim().length >= 2 ? searchTerm.trim() : undefined}
+                    />
+                  )}
+                  {m.edited_at && <span className="ml-1 text-[10px] opacity-60">(изменено)</span>}
                   {m.link_preview && <LinkPreview preview={m.link_preview} mine={mine} />}
                   <div className="mt-0.5 flex items-center justify-end gap-1 text-[10px] opacity-70">
                     {m.pinned && <Pin className="h-2.5 w-2.5" />}
@@ -499,7 +604,7 @@ function ChatPage() {
                 <button key={e} onClick={() => toggleReaction(reactingOn, e)} className="rounded-full p-2 text-2xl transition hover:scale-125 active:scale-110">{e}</button>
               ))}
             </div>
-            <div className="flex gap-2 border-t border-border pt-2">
+            <div className="flex flex-wrap justify-center gap-2 border-t border-border pt-2">
               <button
                 onClick={() => { const msg = messagesById[reactingOn]; if (msg) setReplyTo(msg); setReactingOn(null); }}
                 className="flex items-center gap-1.5 rounded-full bg-muted px-3 py-1.5 text-sm font-semibold"
@@ -512,6 +617,34 @@ function ChatPage() {
               >
                 <Pin className="h-4 w-4" /> Закрепить
               </button>
+              <button
+                onClick={() => { const msg = messagesById[reactingOn]; if (msg) setForwardMsg(msg); setReactingOn(null); }}
+                className="flex items-center gap-1.5 rounded-full bg-muted px-3 py-1.5 text-sm font-semibold"
+              >
+                <Forward className="h-4 w-4" /> Переслать
+              </button>
+              {(() => {
+                const msg = messagesById[reactingOn];
+                if (!msg || msg.user_id !== user?.id) return null;
+                return (
+                  <>
+                    {msg.type === "text" && (
+                      <button
+                        onClick={() => { startEdit(msg); setReactingOn(null); }}
+                        className="flex items-center gap-1.5 rounded-full bg-muted px-3 py-1.5 text-sm font-semibold"
+                      >
+                        <Pencil className="h-4 w-4" /> Изменить
+                      </button>
+                    )}
+                    <button
+                      onClick={() => { deleteMessage(msg); setReactingOn(null); }}
+                      className="flex items-center gap-1.5 rounded-full bg-destructive/10 px-3 py-1.5 text-sm font-semibold text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4" /> Удалить
+                    </button>
+                  </>
+                );
+              })()}
             </div>
           </div>
         </div>
