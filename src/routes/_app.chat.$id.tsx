@@ -359,7 +359,39 @@ function ChatPage() {
   };
 
   const togglePin = async (m: Message) => {
+    haptic("light");
     await supabase.from("messages").update({ pinned: !m.pinned }).eq("id", m.id);
+  };
+
+  const startEdit = (m: Message) => {
+    if (m.user_id !== user?.id) return;
+    haptic("light");
+    setEditingId(m.id);
+    setText(m.content ?? "");
+    setReplyTo(null);
+    setTimeout(() => textareaRef.current?.focus(), 50);
+  };
+
+  const cancelEdit = () => { setEditingId(null); setText(""); };
+
+  const saveEdit = async () => {
+    if (!editingId) return;
+    const content = text.trim();
+    if (!content) return;
+    const { error } = await supabase.from("messages")
+      .update({ content, edited_at: new Date().toISOString() })
+      .eq("id", editingId);
+    if (error) { toast.error(error.message); return; }
+    haptic("success");
+    cancelEdit();
+  };
+
+  const deleteMessage = async (m: Message) => {
+    if (m.user_id !== user?.id) return;
+    if (!confirm("Удалить сообщение?")) return;
+    haptic("warning");
+    const { error } = await supabase.from("messages").delete().eq("id", m.id);
+    if (error) toast.error(error.message);
   };
 
   // Swipe to reply (touch)
