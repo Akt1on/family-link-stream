@@ -64,7 +64,7 @@ function CallPage() {
         <Link to="/chat/$id" params={{ id }} className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 active:bg-white/20">
           <ArrowLeft className="h-5 w-5" />
         </Link>
-        <h2 className="font-semibold">Семейный звонок</h2>
+        <h2 className="font-semibold">{mode === "video" ? "Видеозвонок" : "Аудиозвонок"}</h2>
       </div>
       <div ref={containerRef} className="flex-1" />
     </div>
