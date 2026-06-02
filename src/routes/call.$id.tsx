@@ -16,6 +16,7 @@ declare global {
 
 function CallPage() {
   const { id } = Route.useParams();
+  const { mode } = Route.useSearch();
   const { user } = useAuth();
   const navigate = useNavigate();
   const containerRef = useRef<HTMLDivElement>(null);
