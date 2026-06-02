@@ -193,9 +193,51 @@ function ChatPage() {
     ]);
   }, [messages, user?.id, id]);
 
+  // Smart auto-scroll: only when user is near the bottom
+  const prevLenRef = useRef(0);
   useEffect(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
-  }, [messages.length, typingIds.length]);
+    const el = scrollRef.current;
+    if (!el) return;
+    const grew = messages.length > prevLenRef.current;
+    prevLenRef.current = messages.length;
+    if (isAtBottom) {
+      el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+      setNewCount(0);
+    } else if (grew) {
+      const last = messages[messages.length - 1];
+      if (last && last.user_id !== user?.id) setNewCount((c) => c + 1);
+    }
+  }, [messages.length, typingIds.length, isAtBottom, user?.id]);
+
+  // Track if at bottom
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const onScroll = () => {
+      const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+      setIsAtBottom(atBottom);
+      if (atBottom) setNewCount(0);
+    };
+    el.addEventListener("scroll", onScroll, { passive: true });
+    return () => el.removeEventListener("scroll", onScroll);
+  }, []);
+
+  // Search navigation: jump to matches
+  const searchMatches = useMemo(() => {
+    const q = searchTerm.trim().toLowerCase();
+    if (q.length < 2) return [];
+    return messages.filter((m) => (m.content ?? "").toLowerCase().includes(q));
+  }, [messages, searchTerm]);
+
+  useEffect(() => {
+    if (searchMatches.length === 0) return;
+    const idx = Math.min(searchIdx, searchMatches.length - 1);
+    const el = messageRefs.current[searchMatches[idx].id];
+    el?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [searchIdx, searchMatches]);
+
+  useEffect(() => { setSearchIdx(0); }, [searchTerm]);
+
 
   const sendTyping = () => {
     if (!user) return;
