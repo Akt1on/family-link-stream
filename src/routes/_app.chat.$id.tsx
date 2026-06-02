@@ -87,6 +87,16 @@ function ChatPage() {
   const [attachOpen, setAttachOpen] = useState(false);
   const [videoOpen, setVideoOpen] = useState(false);
   const [sendingLoc, setSendingLoc] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [forwardMsg, setForwardMsg] = useState<Message | null>(null);
+  const [showSearch, setShowSearch] = useState<boolean>(!!initialQuery);
+  const [searchTerm, setSearchTerm] = useState<string>(initialQuery ?? "");
+  const [searchIdx, setSearchIdx] = useState<number>(0);
+  const [mentionOpen, setMentionOpen] = useState<{ q: string; start: number } | null>(null);
+  const [isAtBottom, setIsAtBottom] = useState(true);
+  const [newCount, setNewCount] = useState(0);
+  const messageRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const textareaRef = useRef<HTMLInputElement>(null);
 
   const profilesById = useMemo(
     () => Object.fromEntries(members.map((m) => [m.id, m])),
