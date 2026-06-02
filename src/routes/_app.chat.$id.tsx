@@ -555,7 +555,15 @@ function ChatPage() {
                     const geo = parseGeo(m.media_url);
                     return geo ? <LocationMessage lat={geo.lat} lng={geo.lng} address={m.content} mine={mine} /> : null;
                   })()}
-                  {m.type !== "location" && m.content && <p className="whitespace-pre-wrap break-words text-[15px] leading-snug">{m.content}</p>}
+                  {m.type !== "location" && m.content && (
+                    <MessageText
+                      text={m.content}
+                      mine={mine}
+                      mentions={Object.fromEntries(members.map((mm) => [mm.id, mm.full_name]))}
+                      highlight={searchTerm.trim().length >= 2 ? searchTerm.trim() : undefined}
+                    />
+                  )}
+                  {m.edited_at && <span className="ml-1 text-[10px] opacity-60">(изменено)</span>}
                   {m.link_preview && <LinkPreview preview={m.link_preview} mine={mine} />}
                   <div className="mt-0.5 flex items-center justify-end gap-1 text-[10px] opacity-70">
                     {m.pinned && <Pin className="h-2.5 w-2.5" />}
