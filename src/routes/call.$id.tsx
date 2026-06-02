@@ -35,7 +35,7 @@ function CallPage() {
           prejoinPageEnabled: false,
           disableDeepLinking: true,
           startWithAudioMuted: false,
-          startWithVideoMuted: false,
+          startWithVideoMuted: mode === "audio",
         },
         interfaceConfigOverwrite: {
           MOBILE_APP_PROMO: false,
