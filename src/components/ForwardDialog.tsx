@@ -21,7 +21,7 @@ type Props = {
     content: string | null;
     type: string;
     media_url: string | null;
-    link_preview: unknown;
+    link_preview: any;
   };
   onClose: () => void;
 };
