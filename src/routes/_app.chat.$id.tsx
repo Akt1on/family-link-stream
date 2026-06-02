@@ -93,27 +93,28 @@ function ChatPage() {
     let mounted = true;
 
     const load = async () => {
-      const [{ data: c }, { data: m }, { data: msgs }, { data: rs }] = await Promise.all([
+      const [{ data: c }, { data: m }, { data: msgs }] = await Promise.all([
         supabase.from("conversations").select("name, is_group").eq("id", id).maybeSingle(),
         supabase.from("conversation_members").select("user_id").eq("conversation_id", id),
         supabase.from("messages").select("*").eq("conversation_id", id).order("created_at", { ascending: true }).limit(500),
-        supabase.from("reactions").select("*"),
       ]);
       const memberIds = (m ?? []).map((x) => x.user_id);
-      const { data: profs } = memberIds.length
-        ? await supabase.from("profiles").select("*").in("id", memberIds)
-        : { data: [] as Profile[] };
-      const { data: rd } = await supabase
-        .from("message_reads")
-        .select("message_id, user_id")
-        .eq("conversation_id", id);
+      const msgIds = (msgs ?? []).map((x) => x.id);
+      const [{ data: profs }, { data: rs }, { data: rd }] = await Promise.all([
+        memberIds.length
+          ? supabase.from("profiles").select("*").in("id", memberIds)
+          : Promise.resolve({ data: [] as Profile[] } as any),
+        msgIds.length
+          ? supabase.from("reactions").select("*").in("message_id", msgIds)
+          : Promise.resolve({ data: [] as Reaction[] } as any),
+        supabase.from("message_reads").select("message_id, user_id").eq("conversation_id", id),
+      ]);
       if (!mounted) return;
       setConv(c);
       setMembers(profs ?? []);
       setMessages((msgs ?? []) as Message[]);
       setReads((rd ?? []) as Read[]);
-      const msgIds = new Set((msgs ?? []).map((x) => x.id));
-      setReactions((rs ?? []).filter((r) => msgIds.has(r.message_id)));
+      setReactions((rs ?? []) as Reaction[]);
     };
     load();
 
@@ -128,7 +129,9 @@ function ChatPage() {
       .on("postgres_changes", { event: "DELETE", schema: "public", table: "messages" },
         (payload) => setMessages((m) => m.filter((x) => x.id !== (payload.old as any).id)))
       .on("postgres_changes", { event: "*", schema: "public", table: "reactions" }, async () => {
-        const { data: rs } = await supabase.from("reactions").select("*");
+        const ids = (messages.length ? messages : []).map((x) => x.id);
+        if (!ids.length) return;
+        const { data: rs } = await supabase.from("reactions").select("*").in("message_id", ids);
         setReactions((rs ?? []) as Reaction[]);
       })
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "message_reads", filter: `conversation_id=eq.${id}` },
@@ -354,7 +357,18 @@ function ChatPage() {
               {typingIds.length > 0 ? <span className="text-primary">печатает<span className="typing-dot ml-1" /><span className="typing-dot" /><span className="typing-dot" /></span> : subtitle}
             </p>
           </div>
-          <button onClick={() => navigate({ to: "/call/$id", params: { id } })} className="flex h-10 w-10 items-center justify-center rounded-full bg-[image:var(--gradient-peach)] text-white shadow-warm active:scale-95">
+          <button
+            onClick={() => navigate({ to: "/call/$id", params: { id }, search: { mode: "video" } })}
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-[image:var(--gradient-sky)] text-white shadow-soft active:scale-95"
+            aria-label="Видеозвонок"
+          >
+            <Video className="h-5 w-5" />
+          </button>
+          <button
+            onClick={() => navigate({ to: "/call/$id", params: { id }, search: { mode: "audio" } })}
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-[image:var(--gradient-peach)] text-white shadow-warm active:scale-95"
+            aria-label="Аудиозвонок"
+          >
             <Phone className="h-5 w-5" />
           </button>
         </div>

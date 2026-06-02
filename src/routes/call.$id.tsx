@@ -3,7 +3,12 @@ import { useEffect, useRef } from "react";
 import { useAuth } from "@/lib/auth";
 import { ArrowLeft } from "lucide-react";
 
-export const Route = createFileRoute("/call/$id")({ component: CallPage });
+export const Route = createFileRoute("/call/$id")({
+  component: CallPage,
+  validateSearch: (s: Record<string, unknown>) => ({
+    mode: s.mode === "audio" ? "audio" as const : "video" as const,
+  }),
+});
 
 declare global {
   interface Window { JitsiMeetExternalAPI?: any }
@@ -11,6 +16,7 @@ declare global {
 
 function CallPage() {
   const { id } = Route.useParams();
+  const { mode } = Route.useSearch();
   const { user } = useAuth();
   const navigate = useNavigate();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -29,7 +35,7 @@ function CallPage() {
           prejoinPageEnabled: false,
           disableDeepLinking: true,
           startWithAudioMuted: false,
-          startWithVideoMuted: false,
+          startWithVideoMuted: mode === "audio",
         },
         interfaceConfigOverwrite: {
           MOBILE_APP_PROMO: false,
@@ -50,7 +56,7 @@ function CallPage() {
     }
 
     return () => { try { apiRef.current?.dispose(); } catch {} };
-  }, [id, user?.id]);
+  }, [id, user?.id, mode]);
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-black">
@@ -58,7 +64,7 @@ function CallPage() {
         <Link to="/chat/$id" params={{ id }} className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 active:bg-white/20">
           <ArrowLeft className="h-5 w-5" />
         </Link>
-        <h2 className="font-semibold">Семейный звонок</h2>
+        <h2 className="font-semibold">{mode === "video" ? "Видеозвонок" : "Аудиозвонок"}</h2>
       </div>
       <div ref={containerRef} className="flex-1" />
     </div>
