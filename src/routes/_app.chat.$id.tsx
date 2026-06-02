@@ -604,7 +604,7 @@ function ChatPage() {
                 <button key={e} onClick={() => toggleReaction(reactingOn, e)} className="rounded-full p-2 text-2xl transition hover:scale-125 active:scale-110">{e}</button>
               ))}
             </div>
-            <div className="flex gap-2 border-t border-border pt-2">
+            <div className="flex flex-wrap justify-center gap-2 border-t border-border pt-2">
               <button
                 onClick={() => { const msg = messagesById[reactingOn]; if (msg) setReplyTo(msg); setReactingOn(null); }}
                 className="flex items-center gap-1.5 rounded-full bg-muted px-3 py-1.5 text-sm font-semibold"
@@ -617,6 +617,34 @@ function ChatPage() {
               >
                 <Pin className="h-4 w-4" /> Закрепить
               </button>
+              <button
+                onClick={() => { const msg = messagesById[reactingOn]; if (msg) setForwardMsg(msg); setReactingOn(null); }}
+                className="flex items-center gap-1.5 rounded-full bg-muted px-3 py-1.5 text-sm font-semibold"
+              >
+                <Forward className="h-4 w-4" /> Переслать
+              </button>
+              {(() => {
+                const msg = messagesById[reactingOn];
+                if (!msg || msg.user_id !== user?.id) return null;
+                return (
+                  <>
+                    {msg.type === "text" && (
+                      <button
+                        onClick={() => { startEdit(msg); setReactingOn(null); }}
+                        className="flex items-center gap-1.5 rounded-full bg-muted px-3 py-1.5 text-sm font-semibold"
+                      >
+                        <Pencil className="h-4 w-4" /> Изменить
+                      </button>
+                    )}
+                    <button
+                      onClick={() => { deleteMessage(msg); setReactingOn(null); }}
+                      className="flex items-center gap-1.5 rounded-full bg-destructive/10 px-3 py-1.5 text-sm font-semibold text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4" /> Удалить
+                    </button>
+                  </>
+                );
+              })()}
             </div>
           </div>
         </div>
