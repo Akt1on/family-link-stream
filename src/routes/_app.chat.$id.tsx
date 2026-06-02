@@ -48,6 +48,9 @@ type Message = {
   id: string; conversation_id: string; user_id: string; content: string | null; type: string;
   media_url: string | null; pinned: boolean; created_at: string | null;
   reply_to_id: string | null; link_preview: LinkPreviewData | null;
+  edited_at?: string | null;
+  mention_user_ids?: string[] | null;
+  forwarded_from_conversation_id?: string | null;
 };
 type Reaction = { message_id: string; user_id: string; emoji: string };
 type Read = { message_id: string; user_id: string };
@@ -57,6 +60,7 @@ const URL_RE = /(https?:\/\/[^\s]+)/i;
 
 function ChatPage() {
   const { id } = Route.useParams();
+  const { q: initialQuery } = Route.useSearch();
   const { user } = useAuth();
   const navigate = useNavigate();
   const fetchPreview = useServerFn(fetchLinkPreview);
