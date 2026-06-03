@@ -738,8 +738,25 @@ function ChatPage() {
         />
       )}
 
+      {!isAtBottom && newCount > 0 && (
+        <button
+          onClick={() => { const el = scrollRef.current; if (el) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" }); }}
+          className="fixed bottom-24 right-4 z-30 flex items-center gap-1.5 rounded-full bg-[image:var(--gradient-peach)] px-3 py-2 text-sm font-semibold text-white shadow-warm animate-float-in active:scale-95"
+        >
+          <ChevronDown className="h-4 w-4" />
+          {newCount} {newCount === 1 ? "новое" : "новых"}
+        </button>
+      )}
+
       <div className="safe-bottom sticky bottom-0 z-20 glass border-t border-border/40 px-3 py-2">
-        {replyTo && (
+        {editingId && (
+          <div className="mb-2 flex items-center gap-2 rounded-2xl border-l-2 border-peach-foreground bg-peach/30 px-3 py-2 text-xs">
+            <Pencil className="h-3.5 w-3.5 text-peach-foreground" />
+            <span className="flex-1 font-semibold text-peach-foreground">Редактирование</span>
+            <button onClick={cancelEdit} className="text-peach-foreground"><X className="h-3.5 w-3.5" /></button>
+          </div>
+        )}
+        {replyTo && !editingId && (
           <div className="mb-2 flex items-start gap-2 rounded-2xl border-l-2 border-primary bg-primary/10 px-3 py-2">
             <Reply className="mt-0.5 h-4 w-4 text-primary" />
             <div className="min-w-0 flex-1 text-xs">
@@ -766,6 +783,20 @@ function ChatPage() {
           </div>
         ) : (
           <div className="relative flex items-center gap-2">
+            {mentionOpen && mentionMatches.length > 0 && (
+              <div className="absolute bottom-12 left-12 right-12 z-30 max-h-56 overflow-y-auto rounded-2xl border border-border bg-card p-1 shadow-warm animate-float-in">
+                {mentionMatches.map((p) => (
+                  <button
+                    key={p.id}
+                    onClick={() => pickMention(p)}
+                    className="flex w-full items-center gap-2 rounded-xl px-2 py-2 text-left text-sm hover:bg-muted"
+                  >
+                    <Avatar name={p.full_name} url={p.avatar_url} userId={p.id} size={28} />
+                    <span className="truncate font-medium">{p.full_name}</span>
+                  </button>
+                ))}
+              </div>
+            )}
             {emojiOpen && (
               <EmojiPicker
                 onPick={(e) => setText((t) => t + e)}
@@ -813,15 +844,26 @@ function ChatPage() {
               <Smile className="h-5 w-5" />
             </button>
             <input
+              ref={textareaRef}
               value={text}
-              onChange={(e) => { setText(e.target.value); sendTyping(); }}
-              onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
-              placeholder={replyTo ? "Ваш ответ…" : "Сообщение…"}
+              onChange={(e) => onTextChange(e.target.value, e.target.selectionStart ?? e.target.value.length)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  if (editingId) saveEdit(); else send();
+                } else if (e.key === "Escape" && editingId) {
+                  cancelEdit();
+                }
+              }}
+              placeholder={editingId ? "Изменить сообщение…" : replyTo ? "Ваш ответ…" : "Сообщение…"}
               className="flex-1 rounded-full border border-border bg-card px-4 py-2.5 outline-none focus:border-primary"
             />
             {text.trim() ? (
-              <button onClick={() => send()} className="flex h-10 w-10 items-center justify-center rounded-full bg-[image:var(--gradient-peach)] text-white shadow-warm active:scale-95">
-                <Send className="h-4 w-4" />
+              <button
+                onClick={() => editingId ? saveEdit() : send()}
+                className="flex h-10 w-10 items-center justify-center rounded-full bg-[image:var(--gradient-peach)] text-white shadow-warm active:scale-95"
+              >
+                {editingId ? <Check className="h-4 w-4" /> : <Send className="h-4 w-4" />}
               </button>
             ) : (
               <button onClick={startRecord} className="flex h-10 w-10 items-center justify-center rounded-full bg-[image:var(--gradient-sky)] text-white shadow-soft active:scale-95">
@@ -840,6 +882,10 @@ function ChatPage() {
             await uploadAndSend(file, "video");
           }}
         />
+      )}
+
+      {forwardMsg && (
+        <ForwardDialog message={forwardMsg} onClose={() => setForwardMsg(null)} />
       )}
     </div>
   );
