@@ -251,6 +251,16 @@ function ChatPage() {
   const send = async (overrides?: Partial<Message>) => {
     if (!user) return;
     const content = overrides?.content ?? text.trim();
+    const mentionIds: string[] = [];
+    if ((overrides?.type ?? "text") === "text" && content) {
+      const re = /@([A-Za-zА-Яа-яЁё0-9_\-]{2,30})/g;
+      let mm: RegExpExecArray | null;
+      while ((mm = re.exec(content)) !== null) {
+        const name = mm[1].toLowerCase();
+        const hit = members.find((p) => p.id !== user.id && p.full_name.split(/\s+/)[0]?.toLowerCase() === name);
+        if (hit && !mentionIds.includes(hit.id)) mentionIds.push(hit.id);
+      }
+    }
     const payload: any = {
       conversation_id: id,
       user_id: user.id,
@@ -258,11 +268,13 @@ function ChatPage() {
       type: overrides?.type ?? "text",
       media_url: overrides?.media_url ?? null,
       reply_to_id: replyTo?.id ?? null,
+      mention_user_ids: mentionIds,
     };
     if (payload.type === "text" && !payload.content) return;
     setText("");
     setReplyTo(null);
     setEmojiOpen(false);
+    setMentionOpen(null);
 
     // Detect link and pre-attach preview
     if (payload.type === "text") {
@@ -277,8 +289,40 @@ function ChatPage() {
 
     const { error } = await supabase.from("messages").insert(payload);
     if (error) toast.error(error.message);
+    haptic("light");
     supabase.from("typing_indicators").delete().eq("conversation_id", id).eq("user_id", user.id);
   };
+
+  // @mention autocomplete detection
+  const onTextChange = (val: string, caret: number) => {
+    setText(val);
+    sendTyping();
+    const before = val.slice(0, caret);
+    const m = before.match(/(?:^|\s)@([A-Za-zА-Яа-яЁё0-9_\-]{0,30})$/);
+    if (m && conv?.is_group) {
+      setMentionOpen({ q: m[1].toLowerCase(), start: caret - m[1].length - 1 });
+    } else {
+      setMentionOpen(null);
+    }
+  };
+
+  const pickMention = (p: Profile) => {
+    if (!mentionOpen) return;
+    const first = p.full_name.split(/\s+/)[0] ?? "user";
+    const before = text.slice(0, mentionOpen.start);
+    const after = text.slice(mentionOpen.start + 1 + mentionOpen.q.length);
+    setText(`${before}@${first} ${after}`);
+    setMentionOpen(null);
+    setTimeout(() => textareaRef.current?.focus(), 0);
+  };
+
+  const mentionMatches = useMemo(() => {
+    if (!mentionOpen) return [];
+    return members
+      .filter((p) => p.id !== user?.id)
+      .filter((p) => !mentionOpen.q || p.full_name.toLowerCase().includes(mentionOpen.q))
+      .slice(0, 6);
+  }, [mentionOpen, members, user?.id]);
 
   const uploadAndSend = async (file: File, type: "image" | "voice" | "video") => {
     if (!user) return;
@@ -455,6 +499,13 @@ function ChatPage() {
             </p>
           </div>
           <button
+            onClick={() => { haptic("light"); setShowSearch((v) => !v); if (showSearch) setSearchTerm(""); }}
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-muted active:scale-95"
+            aria-label="Поиск"
+          >
+            <Search className="h-5 w-5" />
+          </button>
+          <button
             onClick={() => navigate({ to: "/call/$id", params: { id }, search: { mode: "video" } })}
             className="flex h-10 w-10 items-center justify-center rounded-full bg-[image:var(--gradient-sky)] text-white shadow-soft active:scale-95"
             aria-label="Видеозвонок"
@@ -469,6 +520,34 @@ function ChatPage() {
             <Phone className="h-5 w-5" />
           </button>
         </div>
+        {showSearch && (
+          <div className="mt-2 flex items-center gap-2 rounded-2xl bg-muted px-3 py-2">
+            <Search className="h-4 w-4 text-muted-foreground" />
+            <input
+              autoFocus
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Поиск в чате"
+              className="flex-1 bg-transparent text-sm outline-none"
+            />
+            {searchMatches.length > 0 && (
+              <span className="text-xs text-muted-foreground">
+                {searchIdx + 1}/{searchMatches.length}
+              </span>
+            )}
+            <button
+              disabled={searchMatches.length === 0}
+              onClick={() => setSearchIdx((i) => (i - 1 + searchMatches.length) % searchMatches.length)}
+              className="px-1 text-sm disabled:opacity-30"
+            >↑</button>
+            <button
+              disabled={searchMatches.length === 0}
+              onClick={() => setSearchIdx((i) => (i + 1) % searchMatches.length)}
+              className="px-1 text-sm disabled:opacity-30"
+            >↓</button>
+            <button onClick={() => { setShowSearch(false); setSearchTerm(""); }} className="text-muted-foreground"><X className="h-4 w-4" /></button>
+          </div>
+        )}
         {pinned.length > 0 && (
           <div className="mt-2 flex items-center gap-2 rounded-xl bg-peach/30 px-3 py-2 text-xs">
             <Pin className="h-3.5 w-3.5 text-peach-foreground" />
@@ -496,6 +575,7 @@ function ChatPage() {
           return (
             <div
               key={m.id}
+              ref={(el) => { messageRefs.current[m.id] = el; }}
               className={`mb-1.5 flex animate-float-in items-end gap-2 ${mine ? "flex-row-reverse" : ""}`}
               onTouchStart={onTouchStart(m)}
               onTouchMove={onTouchMove}
@@ -658,8 +738,25 @@ function ChatPage() {
         />
       )}
 
+      {!isAtBottom && newCount > 0 && (
+        <button
+          onClick={() => { const el = scrollRef.current; if (el) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" }); }}
+          className="fixed bottom-24 right-4 z-30 flex items-center gap-1.5 rounded-full bg-[image:var(--gradient-peach)] px-3 py-2 text-sm font-semibold text-white shadow-warm animate-float-in active:scale-95"
+        >
+          <ChevronDown className="h-4 w-4" />
+          {newCount} {newCount === 1 ? "новое" : "новых"}
+        </button>
+      )}
+
       <div className="safe-bottom sticky bottom-0 z-20 glass border-t border-border/40 px-3 py-2">
-        {replyTo && (
+        {editingId && (
+          <div className="mb-2 flex items-center gap-2 rounded-2xl border-l-2 border-peach-foreground bg-peach/30 px-3 py-2 text-xs">
+            <Pencil className="h-3.5 w-3.5 text-peach-foreground" />
+            <span className="flex-1 font-semibold text-peach-foreground">Редактирование</span>
+            <button onClick={cancelEdit} className="text-peach-foreground"><X className="h-3.5 w-3.5" /></button>
+          </div>
+        )}
+        {replyTo && !editingId && (
           <div className="mb-2 flex items-start gap-2 rounded-2xl border-l-2 border-primary bg-primary/10 px-3 py-2">
             <Reply className="mt-0.5 h-4 w-4 text-primary" />
             <div className="min-w-0 flex-1 text-xs">
@@ -686,6 +783,20 @@ function ChatPage() {
           </div>
         ) : (
           <div className="relative flex items-center gap-2">
+            {mentionOpen && mentionMatches.length > 0 && (
+              <div className="absolute bottom-12 left-12 right-12 z-30 max-h-56 overflow-y-auto rounded-2xl border border-border bg-card p-1 shadow-warm animate-float-in">
+                {mentionMatches.map((p) => (
+                  <button
+                    key={p.id}
+                    onClick={() => pickMention(p)}
+                    className="flex w-full items-center gap-2 rounded-xl px-2 py-2 text-left text-sm hover:bg-muted"
+                  >
+                    <Avatar name={p.full_name} url={p.avatar_url} userId={p.id} size={28} />
+                    <span className="truncate font-medium">{p.full_name}</span>
+                  </button>
+                ))}
+              </div>
+            )}
             {emojiOpen && (
               <EmojiPicker
                 onPick={(e) => setText((t) => t + e)}
@@ -733,15 +844,26 @@ function ChatPage() {
               <Smile className="h-5 w-5" />
             </button>
             <input
+              ref={textareaRef}
               value={text}
-              onChange={(e) => { setText(e.target.value); sendTyping(); }}
-              onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
-              placeholder={replyTo ? "Ваш ответ…" : "Сообщение…"}
+              onChange={(e) => onTextChange(e.target.value, e.target.selectionStart ?? e.target.value.length)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  if (editingId) saveEdit(); else send();
+                } else if (e.key === "Escape" && editingId) {
+                  cancelEdit();
+                }
+              }}
+              placeholder={editingId ? "Изменить сообщение…" : replyTo ? "Ваш ответ…" : "Сообщение…"}
               className="flex-1 rounded-full border border-border bg-card px-4 py-2.5 outline-none focus:border-primary"
             />
             {text.trim() ? (
-              <button onClick={() => send()} className="flex h-10 w-10 items-center justify-center rounded-full bg-[image:var(--gradient-peach)] text-white shadow-warm active:scale-95">
-                <Send className="h-4 w-4" />
+              <button
+                onClick={() => editingId ? saveEdit() : send()}
+                className="flex h-10 w-10 items-center justify-center rounded-full bg-[image:var(--gradient-peach)] text-white shadow-warm active:scale-95"
+              >
+                {editingId ? <Check className="h-4 w-4" /> : <Send className="h-4 w-4" />}
               </button>
             ) : (
               <button onClick={startRecord} className="flex h-10 w-10 items-center justify-center rounded-full bg-[image:var(--gradient-sky)] text-white shadow-soft active:scale-95">
@@ -760,6 +882,10 @@ function ChatPage() {
             await uploadAndSend(file, "video");
           }}
         />
+      )}
+
+      {forwardMsg && (
+        <ForwardDialog message={forwardMsg} onClose={() => setForwardMsg(null)} />
       )}
     </div>
   );
