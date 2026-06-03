@@ -575,6 +575,7 @@ function ChatPage() {
           return (
             <div
               key={m.id}
+              ref={(el) => { messageRefs.current[m.id] = el; }}
               className={`mb-1.5 flex animate-float-in items-end gap-2 ${mine ? "flex-row-reverse" : ""}`}
               onTouchStart={onTouchStart(m)}
               onTouchMove={onTouchMove}
