@@ -251,6 +251,16 @@ function ChatPage() {
   const send = async (overrides?: Partial<Message>) => {
     if (!user) return;
     const content = overrides?.content ?? text.trim();
+    const mentionIds: string[] = [];
+    if ((overrides?.type ?? "text") === "text" && content) {
+      const re = /@([A-Za-zА-Яа-яЁё0-9_\-]{2,30})/g;
+      let mm: RegExpExecArray | null;
+      while ((mm = re.exec(content)) !== null) {
+        const name = mm[1].toLowerCase();
+        const hit = members.find((p) => p.id !== user.id && p.full_name.split(/\s+/)[0]?.toLowerCase() === name);
+        if (hit && !mentionIds.includes(hit.id)) mentionIds.push(hit.id);
+      }
+    }
     const payload: any = {
       conversation_id: id,
       user_id: user.id,
@@ -258,11 +268,13 @@ function ChatPage() {
       type: overrides?.type ?? "text",
       media_url: overrides?.media_url ?? null,
       reply_to_id: replyTo?.id ?? null,
+      mention_user_ids: mentionIds,
     };
     if (payload.type === "text" && !payload.content) return;
     setText("");
     setReplyTo(null);
     setEmojiOpen(false);
+    setMentionOpen(null);
 
     // Detect link and pre-attach preview
     if (payload.type === "text") {
@@ -277,8 +289,40 @@ function ChatPage() {
 
     const { error } = await supabase.from("messages").insert(payload);
     if (error) toast.error(error.message);
+    haptic("light");
     supabase.from("typing_indicators").delete().eq("conversation_id", id).eq("user_id", user.id);
   };
+
+  // @mention autocomplete detection
+  const onTextChange = (val: string, caret: number) => {
+    setText(val);
+    sendTyping();
+    const before = val.slice(0, caret);
+    const m = before.match(/(?:^|\s)@([A-Za-zА-Яа-яЁё0-9_\-]{0,30})$/);
+    if (m && conv?.is_group) {
+      setMentionOpen({ q: m[1].toLowerCase(), start: caret - m[1].length - 1 });
+    } else {
+      setMentionOpen(null);
+    }
+  };
+
+  const pickMention = (p: Profile) => {
+    if (!mentionOpen) return;
+    const first = p.full_name.split(/\s+/)[0] ?? "user";
+    const before = text.slice(0, mentionOpen.start);
+    const after = text.slice(mentionOpen.start + 1 + mentionOpen.q.length);
+    setText(`${before}@${first} ${after}`);
+    setMentionOpen(null);
+    setTimeout(() => textareaRef.current?.focus(), 0);
+  };
+
+  const mentionMatches = useMemo(() => {
+    if (!mentionOpen) return [];
+    return members
+      .filter((p) => p.id !== user?.id)
+      .filter((p) => !mentionOpen.q || p.full_name.toLowerCase().includes(mentionOpen.q))
+      .slice(0, 6);
+  }, [mentionOpen, members, user?.id]);
 
   const uploadAndSend = async (file: File, type: "image" | "voice" | "video") => {
     if (!user) return;
