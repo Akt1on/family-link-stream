@@ -499,6 +499,13 @@ function ChatPage() {
             </p>
           </div>
           <button
+            onClick={() => { haptic("light"); setShowSearch((v) => !v); if (showSearch) setSearchTerm(""); }}
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-muted active:scale-95"
+            aria-label="Поиск"
+          >
+            <Search className="h-5 w-5" />
+          </button>
+          <button
             onClick={() => navigate({ to: "/call/$id", params: { id }, search: { mode: "video" } })}
             className="flex h-10 w-10 items-center justify-center rounded-full bg-[image:var(--gradient-sky)] text-white shadow-soft active:scale-95"
             aria-label="Видеозвонок"
@@ -513,6 +520,34 @@ function ChatPage() {
             <Phone className="h-5 w-5" />
           </button>
         </div>
+        {showSearch && (
+          <div className="mt-2 flex items-center gap-2 rounded-2xl bg-muted px-3 py-2">
+            <Search className="h-4 w-4 text-muted-foreground" />
+            <input
+              autoFocus
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Поиск в чате"
+              className="flex-1 bg-transparent text-sm outline-none"
+            />
+            {searchMatches.length > 0 && (
+              <span className="text-xs text-muted-foreground">
+                {searchIdx + 1}/{searchMatches.length}
+              </span>
+            )}
+            <button
+              disabled={searchMatches.length === 0}
+              onClick={() => setSearchIdx((i) => (i - 1 + searchMatches.length) % searchMatches.length)}
+              className="px-1 text-sm disabled:opacity-30"
+            >↑</button>
+            <button
+              disabled={searchMatches.length === 0}
+              onClick={() => setSearchIdx((i) => (i + 1) % searchMatches.length)}
+              className="px-1 text-sm disabled:opacity-30"
+            >↓</button>
+            <button onClick={() => { setShowSearch(false); setSearchTerm(""); }} className="text-muted-foreground"><X className="h-4 w-4" /></button>
+          </div>
+        )}
         {pinned.length > 0 && (
           <div className="mt-2 flex items-center gap-2 rounded-xl bg-peach/30 px-3 py-2 text-xs">
             <Pin className="h-3.5 w-3.5 text-peach-foreground" />
