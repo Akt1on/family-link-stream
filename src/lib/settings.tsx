@@ -110,13 +110,32 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       toggleTheme: () =>
         persist({ theme: settings.theme === "dark" ? "light" : "dark" }),
       setPushEnabled: async (v) => {
-        if (v && typeof Notification !== "undefined") {
-          try {
-            const perm = await Notification.requestPermission();
-            if (perm !== "granted") return;
-          } catch {}
+        if (v) {
+          const { enablePush } = await import("@/lib/push-client");
+          const sub = await enablePush();
+          if (!sub) return;
+          await persist({ push_enabled: true });
+          if (user) {
+            await supabase
+              .from("user_settings")
+              .upsert({
+                user_id: user.id,
+                push_subscription: sub as any,
+                push_enabled: true,
+                updated_at: new Date().toISOString(),
+              });
+          }
+        } else {
+          const { disablePush } = await import("@/lib/push-client");
+          await disablePush();
+          await persist({ push_enabled: false });
+          if (user) {
+            await supabase
+              .from("user_settings")
+              .update({ push_subscription: null })
+              .eq("user_id", user.id);
+          }
         }
-        await persist({ push_enabled: v });
       },
       setSoundEnabled: (v) => persist({ sound_enabled: v }),
     }),

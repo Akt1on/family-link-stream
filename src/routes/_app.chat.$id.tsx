@@ -291,6 +291,28 @@ function ChatPage() {
     if (error) toast.error(error.message);
     haptic("light");
     supabase.from("typing_indicators").delete().eq("conversation_id", id).eq("user_id", user.id);
+
+    // Fire-and-forget push notifications to other members
+    try {
+      const { sendChatPush } = await import("@/lib/push.functions");
+      const myName =
+        members.find((m) => m.id === user.id)?.full_name?.split(/\s+/)[0] ??
+        "Семья";
+      const preview =
+        payload.type === "image" ? "📷 Фотография" :
+        payload.type === "voice" ? "🎤 Голосовое" :
+        payload.type === "video_circle" ? "⭕ Видео-кружок" :
+        payload.type === "location" ? "📍 Геолокация" :
+        (payload.content || "");
+      void sendChatPush({
+        data: {
+          conversation_id: id,
+          title: conv?.is_group ? `${myName} · ${conv.name ?? "Группа"}` : myName,
+          body: preview.slice(0, 200),
+          url: `/chat/${id}`,
+        },
+      });
+    } catch {}
   };
 
   // @mention autocomplete detection
