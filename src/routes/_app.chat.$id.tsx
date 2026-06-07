@@ -151,11 +151,17 @@ function ChatPage() {
         (payload) => setMessages((m) => m.map((x) => x.id === (payload.new as Message).id ? payload.new as Message : x)))
       .on("postgres_changes", { event: "DELETE", schema: "public", table: "messages" },
         (payload) => setMessages((m) => m.filter((x) => x.id !== (payload.old as any).id)))
-      .on("postgres_changes", { event: "*", schema: "public", table: "reactions" }, async () => {
-        const ids = (messages.length ? messages : []).map((x) => x.id);
-        if (!ids.length) return;
-        const { data: rs } = await supabase.from("reactions").select("*").in("message_id", ids);
-        setReactions((rs ?? []) as Reaction[]);
+      .on("postgres_changes", { event: "*", schema: "public", table: "reactions" }, (payload) => {
+        const evt = payload.eventType;
+        const row = (payload.new ?? payload.old) as Reaction;
+        if (!row?.message_id) return;
+        setReactions((prev) => {
+          if (evt === "DELETE") {
+            return prev.filter((x) => !(x.message_id === row.message_id && x.user_id === row.user_id && x.emoji === row.emoji));
+          }
+          if (prev.some((x) => x.message_id === row.message_id && x.user_id === row.user_id && x.emoji === row.emoji)) return prev;
+          return [...prev, row];
+        });
       })
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "message_reads", filter: `conversation_id=eq.${id}` },
         (payload) => {
