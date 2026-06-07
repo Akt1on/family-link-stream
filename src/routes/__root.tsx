@@ -14,6 +14,7 @@ import { reportLovableError } from "../lib/lovable-error-reporting";
 import { AuthProvider } from "@/lib/auth";
 import { SettingsProvider } from "@/lib/settings";
 import { GlobalNotifications } from "@/components/GlobalNotifications";
+import { OfflineBanner } from "@/components/OfflineBanner";
 import { Toaster } from "@/components/ui/sonner";
 
 function NotFoundComponent() {
@@ -95,6 +96,7 @@ function RootComponent() {
       <AuthProvider>
         <SettingsProvider>
           <GlobalNotifications />
+          <OfflineBanner />
           <Outlet />
           <Toaster position="top-center" />
         </SettingsProvider>
