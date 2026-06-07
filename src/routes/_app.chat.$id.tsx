@@ -208,6 +208,13 @@ function ChatPage() {
   }, [messages, user?.id, id]);
 
   // Smart auto-scroll: only when user is near the bottom
+  // Persist messages to offline cache (debounced by render batching)
+  useEffect(() => {
+    if (messages.length === 0) return;
+    const t = setTimeout(() => cacheMessages(id, messages), 400);
+    return () => clearTimeout(t);
+  }, [messages, id]);
+
   const prevLenRef = useRef(0);
   useEffect(() => {
     const el = scrollRef.current;
