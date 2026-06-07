@@ -22,6 +22,7 @@ import { ForwardDialog } from "@/components/ForwardDialog";
 import { MessageText } from "@/components/MessageText";
 import { fetchLinkPreview } from "@/lib/og.functions";
 import { haptic } from "@/lib/haptics";
+import { cacheMessages, getCachedMessages } from "@/lib/offline-cache";
 
 function parseGeo(url: string | null): { lat: number; lng: number } | null {
   if (!url) return null;
@@ -115,6 +116,10 @@ function ChatPage() {
     if (!user) return;
     let mounted = true;
 
+    // Hydrate from offline cache immediately
+    const cached = getCachedMessages<Message>(id);
+    if (cached && cached.length) setMessages(cached);
+
     const load = async () => {
       const [{ data: c }, { data: m }, { data: msgs }] = await Promise.all([
         supabase.from("conversations").select("name, is_group").eq("id", id).maybeSingle(),
@@ -133,13 +138,16 @@ function ChatPage() {
         supabase.from("message_reads").select("message_id, user_id").eq("conversation_id", id),
       ]);
       if (!mounted) return;
-      setConv(c);
+      if (c) setConv(c);
       setMembers(profs ?? []);
-      setMessages((msgs ?? []) as Message[]);
+      const list = (msgs ?? []) as Message[];
+      setMessages(list);
       setReads((rd ?? []) as Read[]);
       setReactions((rs ?? []) as Reaction[]);
+      cacheMessages(id, list);
     };
     load();
+
 
     const ch = supabase.channel(`chat-${id}`)
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages", filter: `conversation_id=eq.${id}` },
@@ -200,6 +208,13 @@ function ChatPage() {
   }, [messages, user?.id, id]);
 
   // Smart auto-scroll: only when user is near the bottom
+  // Persist messages to offline cache (debounced by render batching)
+  useEffect(() => {
+    if (messages.length === 0) return;
+    const t = setTimeout(() => cacheMessages(id, messages), 400);
+    return () => clearTimeout(t);
+  }, [messages, id]);
+
   const prevLenRef = useRef(0);
   useEffect(() => {
     const el = scrollRef.current;
