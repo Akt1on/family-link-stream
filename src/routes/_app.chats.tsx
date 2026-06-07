@@ -92,11 +92,20 @@ function ChatsPage() {
     };
 
     load();
+    let reloadTimer: ReturnType<typeof setTimeout> | null = null;
+    const scheduleReload = () => {
+      if (reloadTimer) return;
+      reloadTimer = setTimeout(() => { reloadTimer = null; load(); }, 300);
+    };
     const channel = supabase.channel("chats-list")
-      .on("postgres_changes", { event: "*", schema: "public", table: "messages" }, load)
-      .on("postgres_changes", { event: "*", schema: "public", table: "conversation_members" }, load)
+      .on("postgres_changes", { event: "*", schema: "public", table: "messages" }, scheduleReload)
+      .on("postgres_changes", { event: "*", schema: "public", table: "conversation_members" }, scheduleReload)
       .subscribe();
-    return () => { mounted = false; supabase.removeChannel(channel); };
+    return () => {
+      mounted = false;
+      if (reloadTimer) clearTimeout(reloadTimer);
+      supabase.removeChannel(channel);
+    };
   }, [user?.id]);
 
   // Global message search
