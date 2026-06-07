@@ -22,6 +22,7 @@ import { ForwardDialog } from "@/components/ForwardDialog";
 import { MessageText } from "@/components/MessageText";
 import { fetchLinkPreview } from "@/lib/og.functions";
 import { haptic } from "@/lib/haptics";
+import { cacheMessages, getCachedMessages } from "@/lib/offline-cache";
 
 function parseGeo(url: string | null): { lat: number; lng: number } | null {
   if (!url) return null;

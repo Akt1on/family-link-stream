@@ -8,6 +8,7 @@ import { formatTime, isOnline } from "@/lib/utils-app";
 import { toast } from "sonner";
 import { ChatListSkeleton } from "@/components/ChatSkeleton";
 import { haptic } from "@/lib/haptics";
+import { cacheChats, getCachedChats, cacheProfiles, getCachedProfiles } from "@/lib/offline-cache";
 
 export const Route = createFileRoute("/_app/chats")({ component: ChatsPage });
 
@@ -43,6 +44,12 @@ function ChatsPage() {
   useEffect(() => {
     if (!user) return;
     let mounted = true;
+
+    // Hydrate instantly from cache so UI is usable offline / on cold start.
+    const cachedConvs = getCachedChats<Conversation[]>(user.id);
+    const cachedProfiles = getCachedProfiles<Profile[]>();
+    if (cachedConvs) { setConvs(cachedConvs); setLoading(false); }
+    if (cachedProfiles) setProfiles(cachedProfiles);
 
     const load = async () => {
       const { data: allProfiles } = await supabase.from("profiles").select("*").neq("id", user.id);
@@ -89,6 +96,8 @@ function ChatsPage() {
       setProfiles(allProfiles ?? []);
       setConvs(conversations);
       setLoading(false);
+      cacheProfiles(allProfiles ?? []);
+      cacheChats(user.id, conversations);
     };
 
     load();
