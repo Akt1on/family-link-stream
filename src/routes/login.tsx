@@ -5,18 +5,31 @@ import { useAuth } from "@/lib/auth";
 import { Heart } from "lucide-react";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/login")({ component: LoginPage });
+function safeNext(next: unknown): string {
+  if (typeof next !== "string") return "";
+  if (!next.startsWith("/") || next.startsWith("//")) return "";
+  return next;
+}
+
+export const Route = createFileRoute("/login")({
+  component: LoginPage,
+  validateSearch: (s: Record<string, unknown>) => ({ next: safeNext(s.next) }),
+});
 
 function LoginPage() {
   const { session } = useAuth();
   const navigate = useNavigate();
+  const { next } = Route.useSearch();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    if (session) navigate({ to: "/chats", replace: true });
-  }, [session, navigate]);
+    if (session) {
+      if (next) window.location.replace(next);
+      else navigate({ to: "/chats", replace: true });
+    }
+  }, [session, navigate, next]);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,7 +69,7 @@ function LoginPage() {
         </form>
         <p className="mt-6 text-center text-sm text-muted-foreground">
           Нет аккаунта?{" "}
-          <Link to="/signup" className="font-semibold text-primary">Создать</Link>
+          <Link to="/signup" search={next ? { next } : undefined} className="font-semibold text-primary">Создать</Link>
         </p>
       </div>
     </div>
