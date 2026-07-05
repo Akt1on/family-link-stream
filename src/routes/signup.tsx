@@ -5,28 +5,42 @@ import { useAuth } from "@/lib/auth";
 import { Heart } from "lucide-react";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/signup")({ component: SignupPage });
+function safeNext(next: unknown): string {
+  if (typeof next !== "string") return "";
+  if (!next.startsWith("/") || next.startsWith("//")) return "";
+  return next;
+}
+
+export const Route = createFileRoute("/signup")({
+  component: SignupPage,
+  validateSearch: (s: Record<string, unknown>) => ({ next: safeNext(s.next) }),
+});
 
 function SignupPage() {
   const { session } = useAuth();
   const navigate = useNavigate();
+  const { next } = Route.useSearch();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    if (session) navigate({ to: "/chats", replace: true });
-  }, [session, navigate]);
+    if (session) {
+      if (next) window.location.replace(next);
+      else navigate({ to: "/chats", replace: true });
+    }
+  }, [session, navigate, next]);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setBusy(true);
+    const redirectPath = next || "/";
     const { error } = await supabase.auth.signUp({
       email, password,
       options: {
         data: { full_name: name },
-        emailRedirectTo: `${window.location.origin}/`,
+        emailRedirectTo: `${window.location.origin}${redirectPath}`,
       },
     });
     setBusy(false);
@@ -58,7 +72,7 @@ function SignupPage() {
         </form>
         <p className="mt-6 text-center text-sm text-muted-foreground">
           Уже есть аккаунт?{" "}
-          <Link to="/login" className="font-semibold text-primary">Войти</Link>
+          <Link to="/login" search={next ? { next } : undefined} className="font-semibold text-primary">Войти</Link>
         </p>
       </div>
     </div>
