@@ -13,7 +13,10 @@ function safeNext(next: unknown): string {
 
 export const Route = createFileRoute("/signup")({
   component: SignupPage,
-  validateSearch: (s: Record<string, unknown>) => ({ next: safeNext(s.next) }),
+  validateSearch: (s: Record<string, unknown>): { next?: string } => {
+    const n = safeNext(s.next);
+    return n ? { next: n } : {};
+  },
 });
 
 function SignupPage() {
@@ -72,7 +75,7 @@ function SignupPage() {
         </form>
         <p className="mt-6 text-center text-sm text-muted-foreground">
           Уже есть аккаунт?{" "}
-          <Link to="/login" search={next ? { next } : undefined} className="font-semibold text-primary">Войти</Link>
+          <Link to="/login" search={next ? { next } : {}} className="font-semibold text-primary">Войти</Link>
         </p>
       </div>
     </div>
