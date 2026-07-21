@@ -32,9 +32,8 @@ function parseGeo(url: string | null): { lat: number; lng: number } | null {
 
 export const Route = createFileRoute("/_app/chat/$id")({
   component: ChatPage,
-  validateSearch: (s: Record<string, unknown>) => ({
-    q: typeof s.q === "string" ? s.q : undefined,
-  }),
+  validateSearch: (s: Record<string, unknown>): { q?: string } =>
+    typeof s.q === "string" ? { q: s.q } : {},
 });
 
 type Profile = { id: string; full_name: string; avatar_url: string | null; last_seen: string | null };
@@ -72,7 +71,10 @@ function ChatPage() {
   const [reactions, setReactions] = useState<Reaction[]>([]);
   const [reads, setReads] = useState<Read[]>([]);
   const [typingIds, setTypingIds] = useState<string[]>([]);
-  const [text, setText] = useState("");
+  const [text, setText] = useState(() => {
+    if (typeof window === "undefined") return "";
+    try { return localStorage.getItem(`draft:${id}`) ?? ""; } catch { return ""; }
+  });
   const [reactingOn, setReactingOn] = useState<string | null>(null);
   const [replyTo, setReplyTo] = useState<Message | null>(null);
   const [emojiOpen, setEmojiOpen] = useState(false);
@@ -111,6 +113,22 @@ function ChatPage() {
     () => messages.filter((m) => m.type === "image" && m.media_url),
     [messages],
   );
+
+  // Persist draft per conversation
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      if (text) localStorage.setItem(`draft:${id}`, text);
+      else localStorage.removeItem(`draft:${id}`);
+    } catch {}
+  }, [id, text]);
+
+  // Reload draft when switching between chats
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try { setText(localStorage.getItem(`draft:${id}`) ?? ""); } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
 
   useEffect(() => {
     if (!user) return;
