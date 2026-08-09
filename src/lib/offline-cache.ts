@@ -61,22 +61,48 @@ export function getLastSyncAt(): number | null {
   } catch { return null; }
 }
 
+async function probeNetwork(): Promise<boolean> {
+  try {
+    await fetch("/favicon.svg", { method: "HEAD", cache: "no-store" });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function useOnline() {
-  const [online, setOnline] = useState<boolean>(
-    typeof navigator === "undefined" ? true : navigator.onLine,
-  );
+  // Start optimistic: navigator.onLine gives false negatives in some browsers/WebViews,
+  // so we only flip to "offline" after a real network probe fails.
+  const [online, setOnline] = useState(true);
+
   useEffect(() => {
+    let cancelled = false;
+    let timer: ReturnType<typeof setInterval> | null = null;
+
+    const check = async () => {
+      const ok = navigator.onLine === false ? await probeNetwork() : true;
+      if (!cancelled) setOnline(ok);
+    };
+
     const on = () => setOnline(true);
-    const off = () => setOnline(false);
+    const off = () => { void check(); };
+
+    void check();
     window.addEventListener("online", on);
     window.addEventListener("offline", off);
+    timer = setInterval(() => { if (!navigator.onLine) void check(); }, 15_000);
+
     return () => {
+      cancelled = true;
+      if (timer) clearInterval(timer);
       window.removeEventListener("online", on);
       window.removeEventListener("offline", off);
     };
   }, []);
+
   return online;
 }
+
 
 export function useLastSync(): number | null {
   const [ts, setTs] = useState<number | null>(() => getLastSyncAt());
