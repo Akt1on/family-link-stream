@@ -156,18 +156,14 @@ function ChatsPage() {
     navigate({ to: "/chat/$id", params: { id: conv.id } });
   };
 
-  const createFamilyGroup = async () => {
-    if (!user || profiles.length === 0) return;
-    const name = prompt("Название группы", "Семья ❤️");
-    if (!name) return;
-    const { data: conv, error } = await supabase
-      .from("conversations").insert({ is_group: true, name, created_by: user.id }).select().single();
-    if (error || !conv) { toast.error(error?.message ?? "Ошибка"); return; }
-    const members = [{ conversation_id: conv.id, user_id: user.id }, ...profiles.map((p) => ({ conversation_id: conv.id, user_id: p.id }))];
-    await supabase.from("conversation_members").insert(members);
-    toast.success("Группа создана");
-    navigate({ to: "/chat/$id", params: { id: conv.id } });
+  const openFamilyGroup = async () => {
+    if (!user) return;
+    const { data, error } = await (supabase as any).rpc("ensure_family_chat");
+    if (error || !data) { toast.error(error?.message ?? "Не удалось открыть общий чат"); return; }
+    setShowNew(false);
+    navigate({ to: "/chat/$id", params: { id: data as string } });
   };
+
 
   const togglePin = async (c: Conversation) => {
     if (!user) return;
