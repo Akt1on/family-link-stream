@@ -1,10 +1,11 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { Avatar } from "@/components/Avatar";
 import { Cake, Gift } from "lucide-react";
 import { daysUntilBirthday, isOnline } from "@/lib/utils-app";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/_app/family")({ component: FamilyPage });
 
@@ -12,12 +13,54 @@ type Profile = { id: string; full_name: string; avatar_url: string | null; birth
 
 function FamilyPage() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [opening, setOpening] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
     supabase.from("profiles").select("*").then(({ data }) => setProfiles(data ?? []));
   }, [user?.id]);
+
+  const openDM = async (other: Profile) => {
+    if (!user || other.id === user.id || opening) return;
+    setOpening(other.id);
+    try {
+      const { data: mine } = await supabase
+        .from("conversation_members").select("conversation_id").eq("user_id", user.id);
+      const myIds = (mine ?? []).map((r) => r.conversation_id);
+      if (myIds.length) {
+        const { data: shared } = await supabase
+          .from("conversation_members")
+          .select("conversation_id")
+          .eq("user_id", other.id)
+          .in("conversation_id", myIds);
+        const candidateIds = (shared ?? []).map((r) => r.conversation_id);
+        if (candidateIds.length) {
+          const { data: convs } = await supabase
+            .from("conversations").select("id, is_group").in("id", candidateIds).eq("is_group", false);
+          const { data: allMembers } = await supabase
+            .from("conversation_members").select("conversation_id, user_id")
+            .in("conversation_id", (convs ?? []).map((c) => c.id));
+          const found = (convs ?? []).find(
+            (c) => (allMembers ?? []).filter((m) => m.conversation_id === c.id).length === 2,
+          );
+          if (found) { navigate({ to: "/chat/$id", params: { id: found.id } }); return; }
+        }
+      }
+      const { data: conv, error } = await supabase
+        .from("conversations").insert({ is_group: false, created_by: user.id }).select().single();
+      if (error || !conv) { toast.error(error?.message ?? "Не удалось открыть чат"); return; }
+      await supabase.from("conversation_members").insert([
+        { conversation_id: conv.id, user_id: user.id },
+        { conversation_id: conv.id, user_id: other.id },
+      ]);
+      navigate({ to: "/chat/$id", params: { id: conv.id } });
+    } finally {
+      setOpening(null);
+    }
+  };
+
 
   const withBirthday = profiles
     .map((p) => ({ ...p, days: daysUntilBirthday(p.birthday) }))
