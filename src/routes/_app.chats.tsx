@@ -339,7 +339,7 @@ function ChatsPage() {
           <h2 className="text-xl font-semibold">{showArchive ? "Архив пуст" : "Здесь пока тихо"}</h2>
           <p className="text-sm text-muted-foreground">{showArchive ? "Сюда попадут чаты, которые вы спрячете" : "Создайте семейную группу или напишите близкому"}</p>
           {!showArchive && (
-            <button onClick={createFamilyGroup} className="mt-2 rounded-full bg-[image:var(--gradient-sky)] px-5 py-2.5 font-semibold text-white shadow-soft active:scale-95">
+            <button onClick={openFamilyGroup} className="mt-2 rounded-full bg-[image:var(--gradient-sky)] px-5 py-2.5 font-semibold text-white shadow-soft active:scale-95">
               Создать семейную группу
             </button>
           )}
@@ -355,7 +355,7 @@ function ChatsPage() {
           <div className="w-full max-w-md rounded-t-3xl bg-card p-5 pb-8 shadow-warm" onClick={(e) => e.stopPropagation()}>
             <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-border" />
             <h2 className="mb-3 text-xl font-semibold">Новый чат</h2>
-            <button onClick={createFamilyGroup} className="mb-4 flex w-full items-center gap-3 rounded-2xl bg-[image:var(--gradient-sky)] px-4 py-3 text-left text-white shadow-soft">
+            <button onClick={openFamilyGroup} className="mb-4 flex w-full items-center gap-3 rounded-2xl bg-[image:var(--gradient-sky)] px-4 py-3 text-left text-white shadow-soft">
               <Users className="h-5 w-5" />
               <span className="font-semibold">Создать семейную группу</span>
             </button>
