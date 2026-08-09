@@ -102,23 +102,32 @@ function FamilyPage() {
         <h2 className="mb-3 text-sm font-semibold text-muted-foreground">ВСЕ УЧАСТНИКИ</h2>
         <ul className="space-y-2">
           {profiles.map((p, i) => (
-            <li key={p.id} style={{ animationDelay: `${i * 25}ms` }}
-              className="animate-float-in flex items-center gap-3 rounded-2xl bg-card p-3 shadow-soft">
-              <Avatar name={p.full_name} url={p.avatar_url} userId={p.id} online={isOnline(p.last_seen)} size={48} />
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <h3 className="truncate font-semibold">{p.full_name}{p.id === user?.id && <span className="ml-1 text-xs text-muted-foreground">(вы)</span>}</h3>
+            <li key={p.id} style={{ animationDelay: `${i * 25}ms` }} className="animate-float-in">
+              <button
+                type="button"
+                onClick={() => openDM(p)}
+                disabled={p.id === user?.id || opening === p.id}
+                className="flex w-full items-center gap-3 rounded-2xl bg-card p-3 text-left shadow-soft transition active:scale-[0.99] disabled:active:scale-100"
+              >
+                <Avatar name={p.full_name} url={p.avatar_url} userId={p.id} online={isOnline(p.last_seen)} size={48} />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <h3 className="truncate font-semibold">{p.full_name}{p.id === user?.id && <span className="ml-1 text-xs text-muted-foreground">(вы)</span>}</h3>
+                  </div>
+                  <p className="truncate text-xs text-muted-foreground">
+                    {opening === p.id ? "Открываем чат…" : isOnline(p.last_seen) ? "в сети" : "не в сети"}
+                  </p>
                 </div>
-                <p className="truncate text-xs text-muted-foreground">{isOnline(p.last_seen) ? "в сети" : "не в сети"}</p>
-              </div>
-              {p.birthday && (
-                <div className="flex items-center gap-1 rounded-full bg-peach/30 px-2.5 py-1 text-xs text-peach-foreground">
-                  <Cake className="h-3 w-3" />
-                  {new Date(p.birthday).toLocaleDateString("ru-RU", { day: "numeric", month: "short" })}
-                </div>
-              )}
+                {p.birthday && (
+                  <div className="flex items-center gap-1 rounded-full bg-peach/30 px-2.5 py-1 text-xs text-peach-foreground">
+                    <Cake className="h-3 w-3" />
+                    {new Date(p.birthday).toLocaleDateString("ru-RU", { day: "numeric", month: "short" })}
+                  </div>
+                )}
+              </button>
             </li>
           ))}
+
         </ul>
       </section>
     </div>
