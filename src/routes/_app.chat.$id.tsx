@@ -18,6 +18,7 @@ import { LinkPreview } from "@/components/LinkPreview";
 import { VideoCircle } from "@/components/VideoCircle";
 import { VideoRecorder } from "@/components/VideoRecorder";
 import { LocationMessage } from "@/components/LocationMessage";
+import { useStorageUrls } from "@/lib/storage-url";
 import { ForwardDialog } from "@/components/ForwardDialog";
 import { MessageText } from "@/components/MessageText";
 import { fetchLinkPreview } from "@/lib/og.functions";
@@ -113,6 +114,11 @@ function ChatPage() {
     () => messages.filter((m) => m.type === "image" && m.media_url),
     [messages],
   );
+  // Media lives in a private bucket — resolve short-lived signed URLs for display.
+  const mediaUrls = useStorageUrls(
+    messages.filter((m) => m.type !== "location").map((m) => m.media_url),
+  );
+
 
   // Persist draft per conversation
   useEffect(() => {
@@ -683,15 +689,16 @@ function ChatPage() {
                       }}
                       className="mb-1 block overflow-hidden rounded-xl"
                     >
-                      <img src={m.media_url} alt="" className="max-h-72 w-full object-cover transition hover:opacity-95" loading="lazy" />
+                      <img src={mediaUrls[m.media_url] ?? m.media_url} alt="" className="max-h-72 w-full object-cover transition hover:opacity-95" loading="lazy" />
                     </button>
                   )}
                   {m.type === "voice" && m.media_url && (
-                    <VoicePlayer url={m.media_url} mine={mine} />
+                    <VoicePlayer url={mediaUrls[m.media_url] ?? m.media_url} mine={mine} />
                   )}
                   {m.type === "video" && m.media_url && (
-                    <VideoCircle url={m.media_url} mine={mine} />
+                    <VideoCircle url={mediaUrls[m.media_url] ?? m.media_url} mine={mine} />
                   )}
+
                   {m.type === "location" && (() => {
                     const geo = parseGeo(m.media_url);
                     return geo ? <LocationMessage lat={geo.lat} lng={geo.lng} address={m.content} mine={mine} /> : null;
@@ -793,7 +800,7 @@ function ChatPage() {
 
       {lightboxIdx !== null && (
         <Lightbox
-          images={imageMessages.map((m) => ({ url: m.media_url!, caption: m.content }))}
+          images={imageMessages.map((m) => ({ url: mediaUrls[m.media_url!] ?? m.media_url!, caption: m.content }))}
           startIndex={lightboxIdx}
           onClose={() => setLightboxIdx(null)}
         />

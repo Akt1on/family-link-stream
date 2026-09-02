@@ -17,6 +17,9 @@ function AlbumPage() {
   const [profiles, setProfiles] = useState<Record<string, Profile>>({});
   const [viewing, setViewing] = useState<Photo | null>(null);
   const [uploading, setUploading] = useState(false);
+  // The album bucket is private — display through short-lived signed URLs.
+  const photoUrls = useStorageUrls(photos.map((p) => p.photo_url));
+
 
   useEffect(() => {
     if (!user) return;

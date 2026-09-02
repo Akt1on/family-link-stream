@@ -1,7 +1,8 @@
 import { createFileRoute, Outlet, Navigate } from "@tanstack/react-router";
 import { useEffect } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { useAuth } from "@/lib/auth";
-import { supabase } from "@/integrations/supabase/client";
+import { ensureFamilyChat } from "@/lib/family.functions";
 import { BottomNav } from "@/components/BottomNav";
 import { Heart } from "lucide-react";
 
@@ -9,6 +10,7 @@ export const Route = createFileRoute("/_app")({ component: AppLayout });
 
 function AppLayout() {
   const { session, loading, user } = useAuth();
+  const ensureChat = useServerFn(ensureFamilyChat);
 
   // Every signed-in family member is automatically part of the shared group chat.
   useEffect(() => {
@@ -16,14 +18,14 @@ function AppLayout() {
     let cancelled = false;
     (async () => {
       try {
-        const { error } = await (supabase as any).rpc("ensure_family_chat");
-        if (!cancelled && error) console.warn("ensure_family_chat", error.message);
+        await ensureChat({ data: undefined });
       } catch (e) {
-        console.warn("ensure_family_chat failed", e);
+        if (!cancelled) console.warn("ensureFamilyChat failed", e);
       }
     })();
     return () => { cancelled = true; };
   }, [user?.id]);
+
 
   if (loading) {
     return (

@@ -9,6 +9,9 @@ import { toast } from "sonner";
 import { ChatListSkeleton } from "@/components/ChatSkeleton";
 import { haptic } from "@/lib/haptics";
 import { cacheChats, getCachedChats, cacheProfiles, getCachedProfiles } from "@/lib/offline-cache";
+import { useServerFn } from "@tanstack/react-start";
+import { ensureFamilyChat } from "@/lib/family.functions";
+
 
 export const Route = createFileRoute("/_app/chats")({ component: ChatsPage });
 
@@ -28,8 +31,10 @@ type Conversation = {
 function ChatsPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const ensureChat = useServerFn(ensureFamilyChat);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [convs, setConvs] = useState<Conversation[]>([]);
+
   const [loading, setLoading] = useState(true);
   const [showNew, setShowNew] = useState(false);
   const [showArchive, setShowArchive] = useState(false);
@@ -158,11 +163,15 @@ function ChatsPage() {
 
   const openFamilyGroup = async () => {
     if (!user) return;
-    const { data, error } = await (supabase as any).rpc("ensure_family_chat");
-    if (error || !data) { toast.error(error?.message ?? "Не удалось открыть общий чат"); return; }
-    setShowNew(false);
-    navigate({ to: "/chat/$id", params: { id: data as string } });
+    try {
+      const { conversationId } = await ensureChat({ data: undefined });
+      setShowNew(false);
+      navigate({ to: "/chat/$id", params: { id: conversationId } });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Не удалось открыть общий чат");
+    }
   };
+
 
 
   const togglePin = async (c: Conversation) => {
