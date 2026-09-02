@@ -288,8 +288,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      ensure_family_chat: { Args: never; Returns: string }
-      is_member: { Args: { _conv: string; _user: string }; Returns: boolean }
+      [_ in never]: never
     }
     Enums: {
       [_ in never]: never
