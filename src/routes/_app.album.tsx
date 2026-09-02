@@ -5,6 +5,7 @@ import { useAuth } from "@/lib/auth";
 import { Avatar } from "@/components/Avatar";
 import { Plus, X } from "lucide-react";
 import { toast } from "sonner";
+import { useStorageUrls } from "@/lib/storage-url";
 
 export const Route = createFileRoute("/_app/album")({ component: AlbumPage });
 
@@ -17,6 +18,9 @@ function AlbumPage() {
   const [profiles, setProfiles] = useState<Record<string, Profile>>({});
   const [viewing, setViewing] = useState<Photo | null>(null);
   const [uploading, setUploading] = useState(false);
+  // The album bucket is private — display through short-lived signed URLs.
+  const photoUrls = useStorageUrls(photos.map((p) => p.photo_url));
+
 
   useEffect(() => {
     if (!user) return;
@@ -75,7 +79,7 @@ function AlbumPage() {
           {photos.map((p, i) => (
             <button key={p.id} onClick={() => setViewing(p)} style={{ animationDelay: `${i * 20}ms` }}
               className="animate-float-in aspect-square overflow-hidden rounded-lg bg-muted active:opacity-80">
-              <img src={p.photo_url} alt={p.caption ?? ""} loading="lazy" className="h-full w-full object-cover" />
+              <img src={photoUrls[p.photo_url] ?? p.photo_url} alt={p.caption ?? ""} loading="lazy" className="h-full w-full object-cover" />
             </button>
           ))}
         </div>
@@ -94,7 +98,7 @@ function AlbumPage() {
             <button onClick={() => setViewing(null)} className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10"><X className="h-5 w-5" /></button>
           </div>
           <div className="flex flex-1 items-center justify-center p-4">
-            <img src={viewing.photo_url} alt="" className="max-h-full max-w-full rounded-xl object-contain" />
+            <img src={photoUrls[viewing.photo_url] ?? viewing.photo_url} alt="" className="max-h-full max-w-full rounded-xl object-contain" />
           </div>
           {viewing.caption && <p className="safe-bottom p-4 text-center text-white">{viewing.caption}</p>}
         </div>
