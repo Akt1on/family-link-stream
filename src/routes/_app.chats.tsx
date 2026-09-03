@@ -13,7 +13,19 @@ import { useServerFn } from "@tanstack/react-start";
 import { ensureFamilyChat } from "@/lib/family.functions";
 
 
-export const Route = createFileRoute("/_app/chats")({ component: ChatsPage });
+export const Route = createFileRoute("/_app/chats")({
+  component: ChatsPage,
+  head: () => ({
+    meta: [
+      { title: "Чаты — семейный мессенджер" },
+      { name: "description", content: "Общий семейный чат и личные переписки с фото, голосовыми сообщениями и реакциями." },
+      { property: "og:title", content: "Чаты — семейный мессенджер" },
+      { property: "og:description", content: "Общий семейный чат и личные переписки с фото, голосовыми сообщениями и реакциями." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
+});
 
 type Profile = { id: string; full_name: string; avatar_url: string | null; last_seen: string | null; birthday: string | null };
 type Conversation = {

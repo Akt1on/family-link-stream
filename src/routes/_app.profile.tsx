@@ -7,7 +7,19 @@ import { Camera, LogOut, Save, Moon, Sun, Bell, Volume2 } from "lucide-react";
 import { toast } from "sonner";
 import { useSettings } from "@/lib/settings";
 
-export const Route = createFileRoute("/_app/profile")({ component: ProfilePage });
+export const Route = createFileRoute("/_app/profile")({
+  component: ProfilePage,
+  head: () => ({
+    meta: [
+      { title: "Профиль — семейный мессенджер" },
+      { name: "description", content: "Аватар, имя, дата рождения, статус и настройки уведомлений вашего профиля в семейном мессенджере." },
+      { property: "og:title", content: "Профиль — семейный мессенджер" },
+      { property: "og:description", content: "Аватар, имя, дата рождения, статус и настройки уведомлений вашего профиля в семейном мессенджере." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
+});
 
 function ProfilePage() {
   const { user, signOut } = useAuth();

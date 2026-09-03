@@ -5,6 +5,16 @@ import { ArrowLeft } from "lucide-react";
 
 export const Route = createFileRoute("/call/$id")({
   component: CallPage,
+  head: () => ({
+    meta: [
+      { title: "Звонок — семейный мессенджер" },
+      { name: "description", content: "Групповой аудио- и видеозвонок для всей семьи, до 10 участников, прямо в браузере." },
+      { property: "og:title", content: "Звонок — семейный мессенджер" },
+      { property: "og:description", content: "Групповой аудио- и видеозвонок для всей семьи, до 10 участников, прямо в браузере." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
   validateSearch: (s: Record<string, unknown>) => ({
     mode: s.mode === "audio" ? "audio" as const : "video" as const,
   }),
