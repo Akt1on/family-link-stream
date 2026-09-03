@@ -1,4 +1,4 @@
-import { createFileRoute, Outlet, Navigate } from "@tanstack/react-router";
+import { createFileRoute, Outlet, Navigate, useRouterState } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useAuth } from "@/lib/auth";
@@ -11,6 +11,8 @@ export const Route = createFileRoute("/_app")({ component: AppLayout });
 function AppLayout() {
   const { session, loading, user } = useAuth();
   const ensureChat = useServerFn(ensureFamilyChat);
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const fullScreen = pathname.startsWith("/chat/");
 
   // Every signed-in family member is automatically part of the shared group chat.
   useEffect(() => {
@@ -35,10 +37,12 @@ function AppLayout() {
     );
   }
   if (!session) return <Navigate to="/login" replace />;
+  // Full-screen surfaces (chat) own their own layout: no bottom nav, no padding,
+  // otherwise the message composer is pushed underneath the tab bar.
   return (
-    <div className="mx-auto flex min-h-screen max-w-md flex-col pb-20">
+    <div className={`mx-auto flex min-h-screen max-w-md flex-col ${fullScreen ? "" : "pb-20"}`}>
       <Outlet />
-      <BottomNav />
+      {!fullScreen && <BottomNav />}
     </div>
   );
 }
