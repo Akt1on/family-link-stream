@@ -548,7 +548,7 @@ function ChatPage() {
   }, [reads]);
 
   return (
-    <div className="flex h-screen flex-col pb-0">
+    <div className="flex h-[100dvh] min-h-0 flex-col overflow-hidden">
       <header className="safe-top sticky top-0 z-30 glass border-b border-border/40 px-3 py-3">
         <div className="flex items-center gap-3">
           <Link to="/chats" className="flex h-10 w-10 items-center justify-center rounded-full active:bg-muted">
