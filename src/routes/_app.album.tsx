@@ -7,7 +7,19 @@ import { Plus, X } from "lucide-react";
 import { toast } from "sonner";
 import { useStorageUrls } from "@/lib/storage-url";
 
-export const Route = createFileRoute("/_app/album")({ component: AlbumPage });
+export const Route = createFileRoute("/_app/album")({
+  component: AlbumPage,
+  head: () => ({
+    meta: [
+      { title: "Семейный альбом — общие фотографии" },
+      { name: "description", content: "Общий фотоальбом семьи: загружайте снимки с подписями и смотрите моменты всех участников." },
+      { property: "og:title", content: "Семейный альбом — общие фотографии" },
+      { property: "og:description", content: "Общий фотоальбом семьи: загружайте снимки с подписями и смотрите моменты всех участников." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
+});
 
 type Photo = { id: string; user_id: string; photo_url: string; caption: string | null; created_at: string | null };
 type Profile = { id: string; full_name: string; avatar_url: string | null };

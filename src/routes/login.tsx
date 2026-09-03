@@ -13,6 +13,16 @@ function safeNext(next: unknown): string {
 
 export const Route = createFileRoute("/login")({
   component: LoginPage,
+  head: () => ({
+    meta: [
+      { title: "Вход — семейный мессенджер" },
+      { name: "description", content: "Войдите в семейный мессенджер, чтобы продолжить общение с близкими." },
+      { property: "og:title", content: "Вход — семейный мессенджер" },
+      { property: "og:description", content: "Войдите в семейный мессенджер, чтобы продолжить общение с близкими." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
   validateSearch: (s: Record<string, unknown>): { next?: string } => {
     const n = safeNext(s.next);
     return n ? { next: n } : {};

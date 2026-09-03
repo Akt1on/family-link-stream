@@ -7,7 +7,19 @@ import { Cake, Gift } from "lucide-react";
 import { daysUntilBirthday, isOnline } from "@/lib/utils-app";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/_app/family")({ component: FamilyPage });
+export const Route = createFileRoute("/_app/family")({
+  component: FamilyPage,
+  head: () => ({
+    meta: [
+      { title: "Семья — участники и дни рождения" },
+      { name: "description", content: "Все участники семьи, их статус онлайн, ближайшие дни рождения и быстрый переход в личный чат." },
+      { property: "og:title", content: "Семья — участники и дни рождения" },
+      { property: "og:description", content: "Все участники семьи, их статус онлайн, ближайшие дни рождения и быстрый переход в личный чат." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
+});
 
 type Profile = { id: string; full_name: string; avatar_url: string | null; birthday: string | null; last_seen: string | null; status: string | null };
 

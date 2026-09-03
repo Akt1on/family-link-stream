@@ -33,6 +33,16 @@ function parseGeo(url: string | null): { lat: number; lng: number } | null {
 
 export const Route = createFileRoute("/_app/chat/$id")({
   component: ChatPage,
+  head: () => ({
+    meta: [
+      { title: "Чат — семейный мессенджер" },
+      { name: "description", content: "Переписка с близкими: сообщения, фото, голосовые, реакции, ответы и звонки прямо из чата." },
+      { property: "og:title", content: "Чат — семейный мессенджер" },
+      { property: "og:description", content: "Переписка с близкими: сообщения, фото, голосовые, реакции, ответы и звонки прямо из чата." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
   validateSearch: (s: Record<string, unknown>): { q?: string } =>
     typeof s.q === "string" ? { q: s.q } : {},
 });
