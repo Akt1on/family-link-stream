@@ -21,6 +21,17 @@ function oauth(): SupabaseOAuthNamespace {
 
 export const Route = createFileRoute("/.lovable/oauth/consent")({
   ssr: false,
+  head: () => ({
+    meta: [
+      { title: "Доступ приложения — Семья" },
+      { name: "description", content: "Подтверждение доступа внешнего приложения к вашему аккаунту в семейном мессенджере." },
+      { name: "robots", content: "noindex, nofollow" },
+      { property: "og:title", content: "Доступ приложения — Семья" },
+      { property: "og:description", content: "Подтверждение доступа внешнего приложения к вашему аккаунту." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
   validateSearch: (s: Record<string, unknown>) => ({
     authorization_id: typeof s.authorization_id === "string" ? s.authorization_id : "",
   }),
