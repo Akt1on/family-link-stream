@@ -11,6 +11,7 @@ type SyncEvent = { key: string; at: number };
 const listeners = new Set<(e: SyncEvent) => void>();
 
 function safeSet(key: string, value: unknown) {
+  if (typeof window === "undefined") return;
   try {
     const json = JSON.stringify(value);
     if (json.length > MAX_BYTES_PER_KEY) return;
@@ -24,6 +25,7 @@ function safeSet(key: string, value: unknown) {
 }
 
 function safeGet<T>(key: string): T | null {
+  if (typeof window === "undefined") return null;
   try {
     const raw = localStorage.getItem(PREFIX + key);
     return raw ? (JSON.parse(raw) as T) : null;
@@ -55,6 +57,7 @@ export function getCachedProfiles<T = unknown>(): T | null {
 }
 
 export function getLastSyncAt(): number | null {
+  if (typeof window === "undefined") return null;
   try {
     const v = localStorage.getItem(PREFIX + "__last_sync");
     return v ? Number(v) : null;

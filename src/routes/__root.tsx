@@ -80,7 +80,15 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 function RootShell({ children }: { children: ReactNode }) {
   return (
     <html lang="ru">
-      <head><HeadContent /></head>
+      <head>
+        <HeadContent />
+        {/* Applies the saved/system theme before hydration so returning users never see a light flash. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var s=localStorage.getItem("settings");var t=s?JSON.parse(s).theme:null;if(!t){t=window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";}var e=document.documentElement;e.classList.toggle("dark",t==="dark");e.style.colorScheme=t;}catch(_){}})();`,
+          }}
+        />
+      </head>
       <body>
         {children}
         <Scripts />
