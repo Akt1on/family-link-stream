@@ -361,6 +361,7 @@ function ChatPage() {
         payload.type === "voice" ? "🎤 Голосовое" :
         payload.type === "video_circle" ? "⭕ Видео-кружок" :
         payload.type === "location" ? "📍 Геолокация" :
+        payload.type === "call" ? (payload.content === "audio" ? "📞 Начал аудиозвонок — присоединяйтесь!" : "🎥 Начал видеозвонок — присоединяйтесь!") :
         (payload.content || "");
       void sendChatPush({
         data: {

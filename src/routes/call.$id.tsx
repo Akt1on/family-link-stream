@@ -52,7 +52,13 @@ function CallPage() {
           SHOW_JITSI_WATERMARK: false,
         },
       });
-      apiRef.current.addEventListener("readyToClose", () => navigate({ to: "/chats" }));
+      // Explicit media permissions so mobile Safari/Chrome allow camera & mic inside the iframe.
+      try {
+        const iframe: HTMLIFrameElement | undefined = apiRef.current.getIFrame?.();
+        iframe?.setAttribute("allow", "camera; microphone; display-capture; autoplay; clipboard-write; fullscreen");
+        iframe?.setAttribute("allowfullscreen", "true");
+      } catch {}
+      apiRef.current.addEventListener("readyToClose", () => navigate({ to: "/chat/$id", params: { id } }));
     };
 
     if (window.JitsiMeetExternalAPI) {
