@@ -6,6 +6,7 @@ import { Avatar } from "@/components/Avatar";
 import { Plus, X, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { useStorageUrls } from "@/lib/storage-url";
+import { Lightbox } from "@/components/Lightbox";
 
 export const Route = createFileRoute("/_app/album")({
   component: AlbumPage,
@@ -28,7 +29,7 @@ function AlbumPage() {
   const { user } = useAuth();
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [profiles, setProfiles] = useState<Record<string, Profile>>({});
-  const [viewing, setViewing] = useState<Photo | null>(null);
+  const [viewing, setViewing] = useState<number | null>(null);
   const [uploading, setUploading] = useState(false);
   const [pending, setPending] = useState<File | null>(null);
   const [caption, setCaption] = useState("");
@@ -110,12 +111,27 @@ function AlbumPage() {
           Альбом пока пуст. Поделитесь первой фотографией ❤️
         </div>
       ) : (
-        <div className="grid grid-cols-3 gap-1 p-1">
-          {photos.map((p, i) => (
-            <button key={p.id} onClick={() => setViewing(p)} style={{ animationDelay: `${i * 20}ms` }}
-              className="animate-float-in aspect-square overflow-hidden rounded-lg bg-muted active:opacity-80">
-              <img src={photoUrls[p.photo_url] ?? p.photo_url} alt={p.caption ?? ""} loading="lazy" className="h-full w-full object-cover" />
-            </button>
+        <div className="pb-4">
+          {groupByMonth(photos).map((g) => (
+            <section key={g.label}>
+              <h2 className="sticky top-[76px] z-10 bg-background/80 px-4 py-2 text-sm font-semibold capitalize text-muted-foreground backdrop-blur">{g.label}</h2>
+              <div className="grid grid-cols-3 gap-1 px-1">
+                {g.items.map((p, i) => (
+                  <div key={p.id} className="group relative animate-float-in aspect-square" style={{ animationDelay: `${i * 20}ms` }}>
+                    <button onClick={() => setViewing(photos.indexOf(p))}
+                      className="h-full w-full overflow-hidden rounded-lg bg-muted active:opacity-80">
+                      <img src={photoUrls[p.photo_url] ?? p.photo_url} alt={p.caption ?? ""} loading="lazy" className="h-full w-full object-cover" />
+                    </button>
+                    {p.user_id === user?.id && (
+                      <button onClick={() => { if (confirm("Удалить фото?")) removePhoto(p); }} aria-label="Удалить фото"
+                        className="absolute right-1 top-1 flex h-7 w-7 items-center justify-center rounded-full bg-background/80 text-foreground shadow-soft active:scale-95">
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </section>
           ))}
         </div>
       )}
@@ -142,31 +158,26 @@ function AlbumPage() {
         </div>
       )}
 
-      {viewing && (
-        <div className="fixed inset-0 z-50 flex flex-col bg-black/95 animate-float-in" onClick={() => setViewing(null)}>
-          <div className="safe-top flex items-center justify-between p-4 text-white">
-            <div className="flex items-center gap-3">
-              <Avatar name={profiles[viewing.user_id]?.full_name} url={profiles[viewing.user_id]?.avatar_url} userId={viewing.user_id} size={36} />
-              <div>
-                <p className="text-sm font-semibold">{profiles[viewing.user_id]?.full_name}</p>
-                <p className="text-xs text-white/60">{viewing.created_at ? new Date(viewing.created_at).toLocaleDateString("ru-RU") : ""}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              {viewing.user_id === user?.id && (
-                <button onClick={(e) => { e.stopPropagation(); removePhoto(viewing); }}
-                  aria-label="Удалить фото"
-                  className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 active:scale-95"><Trash2 className="h-5 w-5" /></button>
-              )}
-              <button onClick={() => setViewing(null)} aria-label="Закрыть" className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10"><X className="h-5 w-5" /></button>
-            </div>
-          </div>
-          <div className="flex flex-1 items-center justify-center p-4">
-            <img src={photoUrls[viewing.photo_url] ?? viewing.photo_url} alt="" className="max-h-full max-w-full rounded-xl object-contain" />
-          </div>
-          {viewing.caption && <p className="safe-bottom p-4 text-center text-white">{viewing.caption}</p>}
-        </div>
+      {viewing !== null && (
+        <Lightbox
+          images={photos.map((p) => ({
+            url: photoUrls[p.photo_url] ?? p.photo_url,
+            caption: [profiles[p.user_id]?.full_name, p.caption].filter(Boolean).join(" — "),
+          }))}
+          startIndex={viewing}
+          onClose={() => setViewing(null)}
+        />
       )}
     </div>
   );
+}
+
+function groupByMonth(photos: Photo[]) {
+  const groups: { label: string; items: Photo[] }[] = [];
+  for (const p of photos) {
+    const label = p.created_at ? new Date(p.created_at).toLocaleDateString("ru-RU", { month: "long", year: "numeric" }) : "Без даты";
+    const last = groups[groups.length - 1];
+    if (last && last.label === label) last.items.push(p); else groups.push({ label, items: [p] });
+  }
+  return groups;
 }

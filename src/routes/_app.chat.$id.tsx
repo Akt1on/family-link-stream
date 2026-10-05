@@ -91,6 +91,9 @@ function ChatPage() {
   const [emojiOpen, setEmojiOpen] = useState(false);
   const [lightboxIdx, setLightboxIdx] = useState<number | null>(null);
   const [recording, setRecording] = useState(false);
+  const [recSeconds, setRecSeconds] = useState(0);
+  const recTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const cancelRecRef = useRef(false);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -358,6 +361,7 @@ function ChatPage() {
         payload.type === "voice" ? "🎤 Голосовое" :
         payload.type === "video_circle" ? "⭕ Видео-кружок" :
         payload.type === "location" ? "📍 Геолокация" :
+        payload.type === "call" ? (payload.content === "audio" ? "📞 Начал аудиозвонок — присоединяйтесь!" : "🎥 Начал видеозвонок — присоединяйтесь!") :
         (payload.content || "");
       void sendChatPush({
         data: {
@@ -447,26 +451,38 @@ function ChatPage() {
   };
 
 
+  const startCall = (mode: "audio" | "video") => {
+    void send({ type: "call", content: mode } as Partial<Message>);
+    navigate({ to: "/call/$id", params: { id }, search: { mode } });
+  };
+
   const startRecord = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const rec = new MediaRecorder(stream);
       chunksRef.current = [];
+      cancelRecRef.current = false;
       rec.ondataavailable = (e) => chunksRef.current.push(e.data);
       rec.onstop = async () => {
+        stream.getTracks().forEach((t) => t.stop());
+        if (recTimerRef.current) clearInterval(recTimerRef.current);
+        if (cancelRecRef.current || chunksRef.current.length === 0) return;
         const blob = new Blob(chunksRef.current, { type: "audio/webm" });
         const file = new File([blob], "voice.webm", { type: "audio/webm" });
         await uploadAndSend(file, "voice");
-        stream.getTracks().forEach((t) => t.stop());
       };
       rec.start();
       recorderRef.current = rec;
+      setRecSeconds(0);
+      recTimerRef.current = setInterval(() => setRecSeconds((s) => s + 1), 1000);
       setRecording(true);
+      if (navigator.vibrate) navigator.vibrate(30);
     } catch {
       toast.error("Нет доступа к микрофону");
     }
   };
   const stopRecord = () => { recorderRef.current?.stop(); setRecording(false); };
+  const cancelRecord = () => { cancelRecRef.current = true; recorderRef.current?.stop(); setRecording(false); toast("Запись отменена"); };
 
   const toggleReaction = async (messageId: string, emoji: string) => {
     if (!user) return;
@@ -583,14 +599,14 @@ function ChatPage() {
             <Search className="h-5 w-5" />
           </button>
           <button
-            onClick={() => navigate({ to: "/call/$id", params: { id }, search: { mode: "video" } })}
+            onClick={() => startCall("video")}
             className="flex h-10 w-10 items-center justify-center rounded-full bg-[image:var(--gradient-sky)] text-white shadow-soft active:scale-95"
             aria-label="Видеозвонок"
           >
             <Video className="h-5 w-5" />
           </button>
           <button
-            onClick={() => navigate({ to: "/call/$id", params: { id }, search: { mode: "audio" } })}
+            onClick={() => startCall("audio")}
             className="flex h-10 w-10 items-center justify-center rounded-full bg-[image:var(--gradient-peach)] text-white shadow-warm active:scale-95"
             aria-label="Аудиозвонок"
           >
@@ -707,6 +723,20 @@ function ChatPage() {
                   )}
                   {m.type === "video" && m.media_url && (
                     <VideoCircle url={mediaUrls[m.media_url] ?? m.media_url} mine={mine} />
+                  )}
+                  {m.type === "call" && (
+                    <div className="flex min-w-[210px] items-center gap-3 py-1">
+                      <span className="flex h-11 w-11 animate-pulse items-center justify-center rounded-full bg-primary/15 text-primary">
+                        {m.content === "audio" ? <Phone className="h-5 w-5" /> : <Video className="h-5 w-5" />}
+                      </span>
+                      <div className="flex-1">
+                        <p className="text-sm font-semibold">{m.content === "audio" ? "Аудиозвонок" : "Видеозвонок"}</p>
+                        <button
+                          onClick={() => navigate({ to: "/call/$id", params: { id }, search: { mode: m.content === "audio" ? "audio" : "video" } })}
+                          className="mt-1 rounded-full bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground active:scale-95"
+                        >Присоединиться</button>
+                      </div>
+                    </div>
                   )}
 
                   {m.type === "location" && (() => {
@@ -854,10 +884,12 @@ function ChatPage() {
         )}
 
         {recording ? (
-          <div className="flex items-center gap-3 rounded-full bg-destructive/10 px-4 py-3">
-            <span className="h-3 w-3 animate-pulse rounded-full bg-destructive animate-ring" />
-            <span className="flex-1 text-sm">Запись…</span>
-            <button onClick={stopRecord} className="flex h-10 w-10 items-center justify-center rounded-full bg-destructive text-destructive-foreground"><Square className="h-4 w-4" fill="currentColor" /></button>
+          <div className="flex items-center gap-3 rounded-full bg-destructive/10 px-3 py-2 animate-float-in">
+            <button onClick={cancelRecord} aria-label="Отменить запись" className="flex h-10 w-10 items-center justify-center rounded-full bg-muted text-muted-foreground active:scale-95"><X className="h-4 w-4" /></button>
+            <span className="h-3 w-3 animate-pulse rounded-full bg-destructive" />
+            <span className="font-mono text-sm tabular-nums">{Math.floor(recSeconds / 60)}:{String(recSeconds % 60).padStart(2, "0")}</span>
+            <span className="flex-1 truncate text-xs text-muted-foreground">Запись… нажмите ✕ для отмены</span>
+            <button onClick={stopRecord} aria-label="Отправить голосовое" className="flex h-10 w-10 items-center justify-center rounded-full bg-destructive text-destructive-foreground active:scale-95"><Square className="h-4 w-4" fill="currentColor" /></button>
           </div>
         ) : (
           <div className="relative flex items-center gap-2">
