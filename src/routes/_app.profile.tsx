@@ -6,6 +6,7 @@ import { Avatar } from "@/components/Avatar";
 import { Camera, LogOut, Save, Moon, Sun, Bell, Volume2 } from "lucide-react";
 import { toast } from "sonner";
 import { useSettings } from "@/lib/settings";
+import { InviteCard } from "@/components/InviteCard";
 
 export const Route = createFileRoute("/_app/profile")({
   component: ProfilePage,
@@ -102,6 +103,8 @@ function ProfilePage() {
           className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl bg-[image:var(--gradient-peach)] py-3.5 font-semibold text-white shadow-warm active:scale-[0.98] disabled:opacity-60">
           <Save className="h-4 w-4" /> {saving ? "Сохраняем..." : "Сохранить"}
         </button>
+
+        <InviteCard />
 
         <div className="mt-4 space-y-2 rounded-3xl border border-border bg-card p-2">
           <ToggleRow
