@@ -176,9 +176,10 @@ function ChatsPage() {
   const openFamilyGroup = async () => {
     if (!user) return;
     try {
-      const { conversationId } = await ensureChat({ data: undefined });
+      const res = await ensureChat({ data: {} });
+      if (!res.conversationId) { toast.error("Нужен семейный код-приглашение"); return; }
       setShowNew(false);
-      navigate({ to: "/chat/$id", params: { id: conversationId } });
+      navigate({ to: "/chat/$id", params: { id: res.conversationId } });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Не удалось открыть общий чат");
     }
