@@ -17,6 +17,7 @@ import { SettingsProvider } from "@/lib/settings";
 import { GlobalNotifications } from "@/components/GlobalNotifications";
 import { OfflineBanner } from "@/components/OfflineBanner";
 import { Toaster } from "@/components/ui/sonner";
+import { registerAppSw } from "@/lib/pwa-register";
 
 function NotFoundComponent() {
   return (
@@ -100,6 +101,9 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  useEffect(() => {
+    registerAppSw();
+  }, []);
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
