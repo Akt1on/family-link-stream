@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { pickVideoMime, recordedFile } from "@/lib/media-mime";
 import { X, Send } from "lucide-react";
 import { toast } from "sonner";
 
