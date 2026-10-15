@@ -18,6 +18,8 @@ export default defineConfig({
         devOptions: { enabled: false },
         manifest: false, // manifest.json already exists in public/
         workbox: {
+          // One worker for offline cache AND background push notifications.
+          importScripts: ["/push-sw.js"],
           // HTML navigations: network first, fall back to cache offline.
           navigateFallback: "/index.html",
           navigateFallbackDenylist: [/^\/~oauth/, /^\/api\//, /^\/\.mcp/, /^\/\.well-known/],

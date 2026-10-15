@@ -38,6 +38,12 @@ function SignupPage() {
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
 
+  // Invite links (/signup?invite=XXXX-XXXX) store the family code so joining is automatic.
+  useEffect(() => {
+    const code = new URLSearchParams(window.location.search).get("invite");
+    if (code) localStorage.setItem("family_invite", code.slice(0, 32));
+  }, []);
+
   useEffect(() => {
     if (session) {
       if (next) window.location.replace(next);

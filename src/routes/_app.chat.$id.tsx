@@ -7,7 +7,7 @@ import { Avatar } from "@/components/Avatar";
 import {
   ArrowLeft, Send, Mic, Image as ImageIcon, Smile, Phone, Pin, Square, X,
   Reply, Check, CheckCheck, Video, MapPin, Plus, Search, Pencil, Trash2, Forward,
-  ChevronDown,
+  ChevronDown, Copy,
 } from "lucide-react";
 import { formatTime, isOnline } from "@/lib/utils-app";
 import { toast } from "sonner";
@@ -24,6 +24,7 @@ import { MessageText } from "@/components/MessageText";
 import { fetchLinkPreview } from "@/lib/og.functions";
 import { haptic } from "@/lib/haptics";
 import { cacheMessages, getCachedMessages } from "@/lib/offline-cache";
+import { pickAudioMime, recordedFile } from "@/lib/media-mime";
 
 function parseGeo(url: string | null): { lat: number; lng: number } | null {
   if (!url) return null;
@@ -459,16 +460,16 @@ function ChatPage() {
   const startRecord = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const rec = new MediaRecorder(stream);
+      const mime = pickAudioMime();
+      const rec = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
       chunksRef.current = [];
       cancelRecRef.current = false;
-      rec.ondataavailable = (e) => chunksRef.current.push(e.data);
+      rec.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
       rec.onstop = async () => {
         stream.getTracks().forEach((t) => t.stop());
         if (recTimerRef.current) clearInterval(recTimerRef.current);
         if (cancelRecRef.current || chunksRef.current.length === 0) return;
-        const blob = new Blob(chunksRef.current, { type: "audio/webm" });
-        const file = new File([blob], "voice.webm", { type: "audio/webm" });
+        const file = recordedFile(chunksRef.current, rec.mimeType, "voice", "audio/webm");
         await uploadAndSend(file, "voice");
       };
       rec.start();
@@ -528,7 +529,13 @@ function ChatPage() {
     if (!confirm("Удалить сообщение?")) return;
     haptic("warning");
     const { error } = await supabase.from("messages").delete().eq("id", m.id);
-    if (error) toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
+    // Free storage: remove the attached file too (only own files under the user's folder).
+    const match = m.media_url?.match(/\/storage\/v1\/object\/(?:public|sign)\/media\/([^?]+)/);
+    if (match) {
+      const path = decodeURIComponent(match[1]);
+      if (path.startsWith(`${user.id}/`)) void supabase.storage.from("media").remove([path]);
+    }
   };
 
   // Swipe to reply (touch)
@@ -724,20 +731,27 @@ function ChatPage() {
                   {m.type === "video" && m.media_url && (
                     <VideoCircle url={mediaUrls[m.media_url] ?? m.media_url} mine={mine} />
                   )}
-                  {m.type === "call" && (
-                    <div className="flex min-w-[210px] items-center gap-3 py-1">
-                      <span className="flex h-11 w-11 animate-pulse items-center justify-center rounded-full bg-primary/15 text-primary">
-                        {m.content === "audio" ? <Phone className="h-5 w-5" /> : <Video className="h-5 w-5" />}
-                      </span>
-                      <div className="flex-1">
-                        <p className="text-sm font-semibold">{m.content === "audio" ? "Аудиозвонок" : "Видеозвонок"}</p>
-                        <button
-                          onClick={() => navigate({ to: "/call/$id", params: { id }, search: { mode: m.content === "audio" ? "audio" : "video" } })}
-                          className="mt-1 rounded-full bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground active:scale-95"
-                        >Присоединиться</button>
+                  {m.type === "call" && (() => {
+                    const live = !!m.created_at && Date.now() - new Date(m.created_at).getTime() < 60 * 60 * 1000;
+                    return (
+                      <div className="flex min-w-[210px] items-center gap-3 py-1">
+                        <span className={`flex h-11 w-11 items-center justify-center rounded-full ${live ? "animate-pulse bg-primary/15 text-primary" : "bg-muted text-muted-foreground"}`}>
+                          {m.content === "audio" ? <Phone className="h-5 w-5" /> : <Video className="h-5 w-5" />}
+                        </span>
+                        <div className="flex-1">
+                          <p className="text-sm font-semibold">{m.content === "audio" ? "Аудиозвонок" : "Видеозвонок"}</p>
+                          {live ? (
+                            <button
+                              onClick={() => navigate({ to: "/call/$id", params: { id }, search: { mode: m.content === "audio" ? "audio" : "video" } })}
+                              className="mt-1 rounded-full bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground active:scale-95"
+                            >Присоединиться</button>
+                          ) : (
+                            <p className="mt-0.5 text-xs opacity-70">Звонок завершён</p>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    );
+                  })()}
 
                   {m.type === "location" && (() => {
                     const geo = parseGeo(m.media_url);
@@ -811,6 +825,19 @@ function ChatPage() {
               >
                 <Forward className="h-4 w-4" /> Переслать
               </button>
+              {messagesById[reactingOn]?.content && messagesById[reactingOn]?.type !== "call" && (
+                <button
+                  onClick={async () => {
+                    const msg = messagesById[reactingOn];
+                    try { await navigator.clipboard.writeText(msg?.content ?? ""); haptic("success"); toast.success("Скопировано"); }
+                    catch { toast.error("Не удалось скопировать"); }
+                    setReactingOn(null);
+                  }}
+                  className="flex items-center gap-1.5 rounded-full bg-muted px-3 py-1.5 text-sm font-semibold"
+                >
+                  <Copy className="h-4 w-4" /> Копировать
+                </button>
+              )}
               {(() => {
                 const msg = messagesById[reactingOn];
                 if (!msg || msg.user_id !== user?.id) return null;

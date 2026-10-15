@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { pickVideoMime, recordedFile } from "@/lib/media-mime";
 import { X, Send } from "lucide-react";
 import { toast } from "sonner";
 
@@ -32,10 +33,8 @@ export function VideoRecorder({ onCancel, onSend }: Props) {
           videoRef.current.srcObject = stream;
           videoRef.current.play().catch(() => {});
         }
-        const mime = MediaRecorder.isTypeSupported("video/webm;codecs=vp9,opus")
-          ? "video/webm;codecs=vp9,opus"
-          : "video/webm";
-        const rec = new MediaRecorder(stream, { mimeType: mime });
+        const mime = pickVideoMime();
+        const rec = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
         chunksRef.current = [];
         rec.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
         rec.start();
@@ -66,8 +65,7 @@ export function VideoRecorder({ onCancel, onSend }: Props) {
     setBusy(true);
     clearInterval(tickRef.current);
     rec.onstop = async () => {
-      const blob = new Blob(chunksRef.current, { type: "video/webm" });
-      const file = new File([blob], "circle.webm", { type: "video/webm" });
+      const file = recordedFile(chunksRef.current, rec.mimeType, "circle", "video/webm");
       streamRef.current?.getTracks().forEach((t) => t.stop());
       await onSend(file);
     };
