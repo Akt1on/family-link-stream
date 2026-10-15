@@ -45,7 +45,7 @@
   --color-bubble-them-foreground: var(--bubble-them-foreground);
 
   --shadow-soft: 0 4px 24px -8px oklch(0.4 0.05 70 / 0.18);
-  --shadow-lux: var(--shadow-lux);
+  --shadow-lux: var(--lux-shadow);
   --shadow-warm: 0 8px 32px -12px oklch(0.7 0.13 70 / 0.25);
 
   --gradient-sky: linear-gradient(135deg, oklch(0.82 0.11 80), oklch(0.66 0.13 62));
@@ -83,7 +83,7 @@
   --bubble-me-foreground: oklch(0.99 0.01 85);
   --bubble-them: oklch(0.995 0.003 85);
   --bubble-them-foreground: oklch(0.21 0.008 260);
-  --shadow-lux: 0 10px 40px -12px oklch(0.3 0.03 70 / 0.18), 0 1px 0 0 oklch(1 0 0 / 0.6) inset;
+  --lux-shadow: 0 10px 40px -12px oklch(0.3 0.03 70 / 0.18), 0 1px 0 0 oklch(1 0 0 / 0.6) inset;
   --gradient-bg:
     radial-gradient(1200px 600px at 85% -10%, oklch(0.9 0.06 75 / 0.55), transparent 60%),
     radial-gradient(900px 500px at -10% 110%, oklch(0.92 0.03 60 / 0.5), transparent 60%),
@@ -119,7 +119,7 @@
   --bubble-me-foreground: oklch(0.98 0.015 85);
   --bubble-them: oklch(0.23 0.01 260);
   --bubble-them-foreground: oklch(0.94 0.02 85);
-  --shadow-lux: 0 18px 50px -16px oklch(0 0 0 / 0.7), 0 1px 0 0 oklch(1 0 0 / 0.06) inset;
+  --lux-shadow: 0 18px 50px -16px oklch(0 0 0 / 0.7), 0 1px 0 0 oklch(1 0 0 / 0.06) inset;
   --gradient-bg:
     radial-gradient(1100px 600px at 90% -15%, oklch(0.45 0.1 70 / 0.28), transparent 60%),
     radial-gradient(900px 600px at -15% 110%, oklch(0.35 0.06 40 / 0.22), transparent 60%),
