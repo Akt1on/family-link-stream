@@ -7,7 +7,7 @@ import { Avatar } from "@/components/Avatar";
 import {
   ArrowLeft, Send, Mic, Image as ImageIcon, Smile, Phone, Pin, Square, X,
   Reply, Check, CheckCheck, Video, MapPin, Plus, Search, Pencil, Trash2, Forward,
-  ChevronDown,
+  ChevronDown, Copy,
 } from "lucide-react";
 import { formatTime, isOnline } from "@/lib/utils-app";
 import { toast } from "sonner";

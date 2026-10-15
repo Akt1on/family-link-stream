@@ -24,7 +24,9 @@ export async function enablePush(): Promise<PushSubscriptionJSON | null> {
   if (!pushSupported()) return null;
   const perm = await Notification.requestPermission();
   if (perm !== "granted") return null;
-  const reg = await navigator.serviceWorker.register("/push-sw.js");
+  // Reuse the app worker (/sw.js imports the push handlers) so the two never fight over scope "/".
+  let reg = await navigator.serviceWorker.getRegistration("/");
+  if (!reg) reg = await navigator.serviceWorker.register("/push-sw.js");
   await navigator.serviceWorker.ready;
   let sub = await reg.pushManager.getSubscription();
   if (!sub) {
@@ -39,7 +41,7 @@ export async function enablePush(): Promise<PushSubscriptionJSON | null> {
 
 export async function disablePush(): Promise<void> {
   if (!pushSupported()) return;
-  const reg = await navigator.serviceWorker.getRegistration("/push-sw.js");
+  const reg = await navigator.serviceWorker.getRegistration("/");
   const sub = await reg?.pushManager.getSubscription();
   if (sub) {
     try { await sub.unsubscribe(); } catch {}
